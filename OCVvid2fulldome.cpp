@@ -29,8 +29,8 @@
 #include <string.h>
 
 #include <time.h>
-//#include <opencv2/opencv.hpp>
-//#include "tinyfiledialogs.h"
+#include <opencv2/opencv.hpp>
+#include "tinyfiledialogs.h"
 
 #define CV_PI   3.1415926535897932384626433832795
 

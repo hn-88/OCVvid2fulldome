@@ -4,12 +4,14 @@ PROJECT(OCVvid2fulldome)
 
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake_modules/")
 
-#find_package(OpenCV REQUIRED)
+# https://stackoverflow.com/questions/45614230/running-multiple-versions-of-opencv-on-the-same-computer
+set(OpenCV_DIR ~/OpenCVLocal/lib/cmake/opencv4 )
+find_package(OpenCV REQUIRED)
 
-#include_directories($(OpenCV_INCLUDE_DIR))
-
-aux_source_directory(. SRC_LIST)
+#include_directories(~/OpenCVLocal/include/opencv4)
+include_directories(${OpenCV_INCLUDE_DIRS})
 
 add_executable(OCVvid2fulldome OCVvid2fulldome.cpp)
-#target_link_libraries(OCVvid2fulldome ${OpenCV_LIBS}  )
+#target_link_libraries(OCVvid2fulldome ~/OpenCVLocal/lib  )
+target_link_libraries(OCVvid2fulldome ${OpenCV_LIBS})
 
