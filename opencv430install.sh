@@ -12,8 +12,8 @@ sudo apt-get install -y libtbb2 libtbb-dev libjpeg-dev libpng-dev libtiff-dev li
 wget https://github.com/hn-88/opencvdeb/releases/download/v4.3.0.1/OpenCVbuild.zip
 unzip OpenCVbuild.zip
 
-mv home/travis/build/hn-88/opencvdeb/opencv/build/OpenCVLocal OpenCVLocal -v
-rm -Rvf ~/home
+mv home/travis/build/hn-88/opencvdeb/opencv/build/OpenCVLocal ~/OpenCVLocal -v
+rm -Rvf home
 
 
 
