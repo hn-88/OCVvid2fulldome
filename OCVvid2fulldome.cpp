@@ -34,12 +34,59 @@
 
 #define CV_PI   3.1415926535897932384626433832795
 
-//using namespace cv;
 
 // some global variables
 
 
 int main(int argc,char *argv[])
 {
-  return 0;
+	int outputw;
+	int numvids;
+	std::string VidFileName[100];
+	int vidlongi[100];
+	int vidw[100];
+	int looptemp=0;
+	
+	std::cout << "Enter Outputw: ";
+	std::cin >> outputw;
+	std::cout << "Enter number of videos (max=99): ";
+	std::cin >> numvids;
+	
+	char const * FilterPatterns[2] =  { "*.avi","*.*" };
+	char const * OpenFileName;
+	
+	while(looptemp<numvids)
+	{
+		 OpenFileName = tinyfd_openFileDialog(
+			"Open a video file",
+			"",
+			2,
+			FilterPatterns,
+			NULL,
+			0);
+
+		if (! OpenFileName)
+		{
+			tinyfd_messageBox(
+				"Error",
+				"No file chosen. ",
+				"ok",
+				"error",
+				1);
+			return 1 ;
+		}
+		
+		VidFileName[looptemp] = std::string(OpenFileName);
+		std::cout << "Enter desired position for this video as degrees longitude, back = 0: ";
+		std::cin >> vidlongi[looptemp];
+		std::cout << "Enter desired width for this video in degrees: ";
+		std::cin >> vidw[looptemp];
+		
+		looptemp++;
+	}
+	
+	for (int i=0;i<numvids;i++)
+		std::cout<<VidFileName[i]<<" " << vidlongi[i] << " " << vidw[i] << std::endl;
+	
+	return 0;
 }

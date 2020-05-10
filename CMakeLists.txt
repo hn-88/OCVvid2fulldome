@@ -11,7 +11,7 @@ find_package(OpenCV REQUIRED)
 #include_directories(~/OpenCVLocal/include/opencv4)
 include_directories(${OpenCV_INCLUDE_DIRS})
 
-add_executable(OCVvid2fulldome OCVvid2fulldome.cpp)
+add_executable(OCVvid2fulldome OCVvid2fulldome.cpp tinyfiledialogs.c)
 #target_link_libraries(OCVvid2fulldome ~/OpenCVLocal/lib  )
 target_link_libraries(OCVvid2fulldome ${OpenCV_LIBS})
 
