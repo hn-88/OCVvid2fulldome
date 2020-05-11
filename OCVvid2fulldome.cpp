@@ -27,7 +27,7 @@
 #endif
 
 #include <string>
-
+#include <fstream>
 #include <time.h>
 #include <opencv2/opencv.hpp>
 #include "tinyfiledialogs.h"
@@ -129,11 +129,13 @@ int main(int argc,char *argv[])
 {
 	bool doneflag = 0;
 	bool showdisplay = 1;
+	bool skipinputs = 0;
 	int outputw, outputfps;
 	char outputfourcc[5] = {'X','V','I','D', '\0'};
 	std::string fourccstr;
 	int numvids;
 	std::string VidFileName[100];
+	std::string NAME;
 	int vidlongi[100];
 	int vidw[100];
 	int looptemp=0;
@@ -143,6 +145,7 @@ int main(int argc,char *argv[])
 	int  fps, key;
 	int t_start, t_end;
     unsigned long long framenum = 0;
+    std::string tempstring;
      
     cv::Mat src, dst, res;
     cv::Mat dstfloat, dstmult, dstres, dstflip;
@@ -152,9 +155,65 @@ int main(int argc,char *argv[])
     cv::Mat dst2;	// temp dst, for eachvid
     cv::Mat map_x[100], map_y[100];
     cv::Mat dst_x[100], dst_y[100];
+    
+    if(argc > 1)
+    {
+		// argument can be ini file path
+		std::ifstream infile(argv[1]);
+		if (infile.is_open())
+		  {
+			  try
+			  {
+				std::getline(infile, tempstring);
+				std::getline(infile, tempstring);
+				std::getline(infile, tempstring);
+				// first three lines of ini file are comments
+				std::getline(infile, NAME);
+				infile >> tempstring;
+				infile >> outputw;
+				infile >> tempstring;
+				infile >> outputfps;
+				infile >> tempstring;
+				infile >> outputfourcc;
+				infile >> tempstring;
+				infile >> numvids;
+				// https://stackoverflow.com/questions/6649852/getline-not-working-properly-what-could-be-the-reasons
+				// dummy getline after the >> on previous line
+				std::getline(infile, tempstring);
+				
+				for(int i=0; i<numvids; i++)
+				{
+					std::getline(infile, tempstring);
+					std::getline(infile, tempstring);
+					VidFileName[i] = tempstring;
+					infile >> tempstring;
+					infile >> vidlongi[i];
+					infile >> tempstring;
+					infile >> vidw[i];
+					// dummy getline after the >> on previous line
+					std::getline(infile, tempstring);
+				}
+				infile.close();
+				skipinputs = 1;
+			  } // end try
+			  catch(std::ifstream::failure &readErr) 
+				{
+					std::cerr << "\n\nException occured when reading ini file\n"
+						<< readErr.what()
+						<< std::endl;
+					skipinputs = 0;
+				} // end catch
+			 
+		  } // end if isopen
+		  
+	  } // end if argc > 1
+
 	
+	if(!skipinputs)
+	{
 	// better to use getline
 	// https://stackoverflow.com/questions/4999650/c-how-do-i-check-if-the-cin-buffer-is-empty
+	std::cout << "ini file not supplied or unreadable. So, manual inputs ..." << std::endl;
 	std::cout << "Enter Output video width (=height): ";
 	std::cin >> outputw;
 	std::cout << "Enter Output video framerate (fps): ";
@@ -199,7 +258,7 @@ int main(int argc,char *argv[])
 			return 1 ;
 		}
 		
-		VidFileName[looptemp] = std::string(OpenFileName);
+		VidFileName[looptemp] = escaped(std::string(OpenFileName));
 		std::cout << "Enter desired position for this video as degrees longitude, back = 0: ";
 		std::cin >> vidlongi[looptemp];
 		std::cout << "Enter desired width for this video in degrees: ";
@@ -210,7 +269,7 @@ int main(int argc,char *argv[])
 	
 	std::string OpenFileNamestr = VidFileName[0];
 	std::string::size_type pAt = OpenFileNamestr.find_last_of('.');                  // Find extension point
-    std::string NAME = OpenFileNamestr.substr(0, pAt) + "F" + ".avi";   // Form the new name with container
+    NAME = OpenFileNamestr.substr(0, pAt) + "F" + ".avi";   // Form the new name with container
     
 	char const * SaveFileName = tinyfd_saveFileDialog(
 		"Now enter the output video file name, like output.mp4",
@@ -234,6 +293,35 @@ int main(int argc,char *argv[])
 		escapedpath = escaped(std::string(SaveFileName));
 		NAME = escapedpath;
 	}
+	
+    // save parameters as an ini file
+    pAt = NAME.find_last_of('.');                  // Find extension point
+    std::string ininame = NAME.substr(0, pAt) + ".ini";   // Form the ini name 
+    std::ofstream inioutfile(ininame, std::ofstream::out);
+    inioutfile << "#ini_file_for_OCVvid2fulldome--Comments_start_with_#" << std::endl;
+    inioutfile << "#Each_parameter_is_entered_in_the_line_below_the_comment." << std::endl;
+    inioutfile << "#Output_file_path" << std::endl;
+    inioutfile << NAME << std::endl;
+    inioutfile << "#Outputw_pixels__=height" << std::endl;
+    inioutfile << outputw << std::endl;
+    inioutfile << "#Output_fps" << std::endl;
+    inioutfile << outputfps << std::endl;
+    inioutfile << "#Output_fourcc" << std::endl;
+    inioutfile << outputfourcc << std::endl;
+    inioutfile << "#Number_of_input_videos_max_is_99" << std::endl;
+    inioutfile << numvids << std::endl;
+	for (int i=0;i<numvids;i++)
+	{
+		inioutfile << "#Filename" << i << std::endl;
+		inioutfile << VidFileName[i] << std::endl;
+		inioutfile << "#vidlongi" << i << std::endl;
+		inioutfile << vidlongi[i] << std::endl;
+		inioutfile << "#vidw" << i << std::endl;
+		inioutfile << vidw[i] << std::endl;
+	}
+		
+	} // end if !skipinputs
+	
 	Sout = cv::Size(outputw,outputw);
 	outputVideo.open(NAME, outputVideo.fourcc(outputfourcc[0], outputfourcc[1], outputfourcc[2], outputfourcc[3]), 
         outputfps, Sout, true);
@@ -242,12 +330,11 @@ int main(int argc,char *argv[])
         std::cout  << "Could not open the output video for write: " << NAME << std::endl;
         return -1;
     }
-     
-
+	
 	for (int i=0;i<numvids;i++)
 	{
 		//std::cout<<VidFileName[i]<<" " << vidlongi[i] << " " << vidw[i] << std::endl;
-		escapedpath = escaped(VidFileName[i]);
+		escapedpath = VidFileName[i];
 		inputVideo[i] = cv::VideoCapture(escapedpath);
 		map_x[i] = cv::Mat(Sout, CV_32FC1);
 		map_y[i] = cv::Mat(Sout, CV_32FC1);
@@ -291,7 +378,7 @@ int main(int argc,char *argv[])
         t_end = time(NULL);
 		if (t_end - t_start >= 5)
 		{
-			printf("Frame: %llu fps: %.1f           \r", framenum++, float(fps)/5 );
+			printf("Frame: %llu  fps: %.1f           \r", framenum++, float(fps)/5 );
 			// extra spaces to delete previous line's characters if any
 			fflush(stdout);
 			t_start = time(NULL);
@@ -299,7 +386,7 @@ int main(int argc,char *argv[])
 		}
 		else
 		{
-			printf("Frame: %llu  \r", framenum++ );
+			printf("Frame: %llu \r", framenum++ );
 			fflush(stdout);
 		}
 			
