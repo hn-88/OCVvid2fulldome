@@ -1,0 +1,25 @@
+# Win32 build which can work on Win7 upwards.
+version: 0.01.{build}
+# base image
+image: Visual Studio 2015
+
+platform: Win32
+configuration: Release       
+
+install:
+ - ps: Start-FileDownload https://ci.appveyor.com/api/buildjobs/4ibn87ybb12e9pn5/artifacts/OpenCV.zip
+ - 7z x OpenCV.zip
+ - cmd: setx -m OpenCV_DIR C:\projects\ocvvid2fulldome\OpenCV\x86\vc14
+#- cmd: setx path "%path%;C:\projects\ocvwarp\opencv-3.4.9\build\install\x86\vc14\bin;C:\projects\ocvwarp\opencv-3.4.9\build\install\x86\vc14\lib"
+ - refreshenv
+  
+  
+build:
+  project: OCVvid2fulldomeWin32.vcxproj
+
+  verbosity: minimal
+ 
+artifacts:
+- path: Release\OCVvid2fulldomeWin32.exe
+  
+    
