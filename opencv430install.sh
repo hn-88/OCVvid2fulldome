@@ -19,25 +19,6 @@ rm -Rvf home
 # https://www.hpc.dtu.dk/?page_id=1180
 sudo cp -R /home/travis/OpenCVLocal/lib/* /usr/local/lib
 
-sudo ln /usr/local/lib/libopencv_core.so.4.3.0 /usr/local/lib/libopencv_core.so.4.3
-sudo ln /usr/local/lib/libopencv_core.so.4.3 /usr/local/lib/libopencv_core.so
-
-sudo ln /usr/local/lib/libopencv_highgui.so.4.3.0 /usr/local/lib/libopencv_highgui.so.4.3
-sudo ln /usr/local/lib/libopencv_highgui.so.4.3 /usr/local/lib/libopencv_highgui.so
-
-sudo ln /usr/local/lib/libopencv_imgcodecs.so.4.3.0 /usr/local/lib/libopencv_imgcodecs.so.4.3
-sudo ln /usr/local/lib/libopencv_imgcodecs.so.4.3 /usr/local/lib/libopencv_imgcodecs.so
-
-sudo ln /usr/local/lib/libopencv_imgproc.so.4.3.0 /usr/local/lib/libopencv_imgproc.so.4.3
-sudo ln /usr/local/lib/libopencv_imgproc.so.4.3   /usr/local/lib/libopencv_imgproc.so
-
-sudo ln /usr/local/lib/libopencv_videoio.so.4.3.0 /usr/local/lib/libopencv_videoio.so.4.3
-sudo ln /usr/local/lib/libopencv_videoio.so.4.3   /usr/local/lib/libopencv_videoio.so
-
-sudo ln /usr/local/lib/libopencv_video.so.4.3.0 /usr/local/lib/libopencv_video.so.4.3
-sudo ln /usr/local/lib/libopencv_video.so.4.3   /usr/local/lib/libopencv_video.so
-
-
 
 
 
