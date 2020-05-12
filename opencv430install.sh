@@ -15,5 +15,9 @@ unzip OpenCVbuild.zip
 mv home/travis/build/hn-88/opencvdeb/opencv/build/OpenCVLocal ~/OpenCVLocal -v
 rm -Rvf home
 
+# doing this copy so that ldd can find the libs for linuxdeployqt
+# https://www.hpc.dtu.dk/?page_id=1180
+sudo cp OpenCVLocal/lib/* /usr/local/lib/*
+
 
 
