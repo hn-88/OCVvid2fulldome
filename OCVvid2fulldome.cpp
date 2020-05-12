@@ -26,6 +26,8 @@
 #include <unistd.h>
 #endif
 
+#include <iostream>
+#include <iomanip>
 #include <string>
 #include <fstream>
 #include <time.h>
@@ -358,6 +360,9 @@ int main(int argc,char *argv[])
 		inputEnded[i]=0;
 	}
 	
+	// https://stackoverflow.com/questions/5907031/printing-the-correct-number-of-decimal-points-with-cout
+	std::cout << std::fixed << std::setprecision(1);
+	
 	while(1)
 	{
 		dst = cv::Mat::zeros(Sout, CV_8UC3);
@@ -400,7 +405,7 @@ int main(int argc,char *argv[])
         t_end = time(NULL);
 		if (t_end - t_start >= 5)
 		{
-			printf("Frame: %llu  fps: %.1f           \r", framenum++, float(fps)/5 );
+			std::cout << "Frame: " << framenum++ << "  fps: " << (float)fps/5 << "           \r";
 			// extra spaces to delete previous line's characters if any
 			fflush(stdout);
 			t_start = time(NULL);
@@ -408,7 +413,7 @@ int main(int argc,char *argv[])
 		}
 		else
 		{
-			printf("Frame: %llu \r", framenum++ );
+			std::cout << "Frame: " << framenum++ <<  "\r";
 			fflush(stdout);
 		}
 			
@@ -449,5 +454,6 @@ int main(int argc,char *argv[])
 			
 	} // end of while(1)
 	
+	std::cout << std::endl << "Finished writing." << std::endl;
 	return 0;
 }
