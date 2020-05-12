@@ -36,9 +36,6 @@
 
 #define CV_PI   3.1415926535897932384626433832795
 
-
-// some global variables
-
 std::string escaped(const std::string& input)
 {
 	// https://stackoverflow.com/questions/48260879/how-to-replace-with-in-c-string
@@ -63,17 +60,30 @@ std::string escaped(const std::string& input)
 
 void update_map( int vidlongi, int vidlati, int vidw, cv::Mat &map_x, cv::Mat &map_y )
 {
-	float angleyrad = -vidlati*CV_PI/180;	// made these minus for more intuitive feel
-	float anglexrad = -vidlongi*CV_PI/180;
+	float angleyrad = (float)vidlati*CV_PI/180;
+	float anglexrad = (float)vidlongi*CV_PI/180;
+	float resizeratio = (float)vidw/360;
+	float rrinv = 1/resizeratio;
+	float oneminusrrby2 = (1 - resizeratio)/2;
+	float rrby2 = resizeratio/2;
+	
+	// debug
+	std::cout << resizeratio << " " << rrinv << std::endl;
 		
 	for(int j = 0; j < map_x.rows; j++ )
 	{ 
 		for( int i = 0; i < map_x.cols; i++ )
 		{
-			if( i < map_x.cols*0.5 &&  j < map_x.rows*0.5 )
+			if( i < map_x.cols*oneminusrrby2 
+			&& i > map_x.cols*rrby2 
+			&& j < map_x.rows*oneminusrrby2 
+			&& j > map_x.rows*rrby2 )
 			{
-			 map_x.at<float>(j,i) = 2*( i - map_x.cols*0.25 ) + 0.5 ;
-			 map_y.at<float>(j,i) = 2*( j - map_x.rows*0.25 ) + 0.5 ;
+			 map_x.at<float>(j,i) = 2*( i - map_x.cols*resizeratio/2 ) + 0.5  ;
+			 map_y.at<float>(j,i) = 2*( j - map_x.rows*resizeratio/2 ) + 0.5 ;
+			 // debug
+			 //~ std::cout << i << " " << j << " ";
+			 //~ std::cout << map_x.at<float>(j,i) << " " << map_y.at<float>(j,i) << std::endl;
 			}
 		} // end for i
 	} // end for j
@@ -180,6 +190,8 @@ int main(int argc,char *argv[])
 	std::cout << "Enter Output video framerate (fps): ";
 	std::cin >> outputfps;
 	std::cout << "Enter Output video fourcc (default is XVID): ";
+	// a dummy getline is needed
+	std::getline(std::cin, tempstring);
 	std::getline(std::cin, fourccstr);
 	if(fourccstr.empty())
 	{
