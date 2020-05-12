@@ -61,69 +61,24 @@ std::string escaped(const std::string& input)
     return output;
 }
 
-void update_map( int vidlongi, int vidw, cv::Mat &map_x, cv::Mat &map_y )
+void update_map( int vidlongi, int vidlati, int vidw, cv::Mat &map_x, cv::Mat &map_y )
 {
-	//float vidlongrad = 
-	if (vidlongi==1)
-	{
-		for( int j = 0; j < map_x.rows; j++ )
-		{ 
-			for( int i = 0; i < map_x.cols; i++ )
+	float angleyrad = -vidlati*CV_PI/180;	// made these minus for more intuitive feel
+	float anglexrad = -vidlongi*CV_PI/180;
+		
+	for(int j = 0; j < map_x.rows; j++ )
+	{ 
+		for( int i = 0; i < map_x.cols; i++ )
+		{
+			if( i < map_x.cols*0.5 &&  j < map_x.rows*0.5 )
 			{
-				if( i < map_x.cols*0.5 &&  j < map_x.rows*0.5 )
-				{
-                 map_x.at<float>(j,i) = 2*( i - map_x.cols*0.25 ) + 0.5 ;
-                 map_y.at<float>(j,i) = 2*( j - map_x.rows*0.25 ) + 0.5 ;
-                }
-			} // end for i
-		} // end for j
-	} // end if
+			 map_x.at<float>(j,i) = 2*( i - map_x.cols*0.25 ) + 0.5 ;
+			 map_y.at<float>(j,i) = 2*( j - map_x.rows*0.25 ) + 0.5 ;
+			}
+		} // end for i
+	} // end for j
 	
-	if (vidlongi==2)
-	{
-		for( int j = 0; j < map_x.rows; j++ )
-		{ 
-			for( int i = 0; i < map_x.cols; i++ )
-			{
-				if( i > map_x.cols*0.5 &&  j < map_x.rows*0.5 )
-				{
-                 map_x.at<float>(j,i) = 2*( i - map_x.cols*0.25 ) + 0.5 ;
-                 map_y.at<float>(j,i) = 2*( j - map_x.rows*0.25 ) + 0.5 ;
-                }
-			} // end for i
-		} // end for j
-	} // end if
 	
-	if (vidlongi==3)
-	{
-		for( int j = 0; j < map_x.rows; j++ )
-		{ 
-			for( int i = 0; i < map_x.cols; i++ )
-			{
-				if( i < map_x.cols*0.5 &&  j > map_x.rows*0.5 )
-				{
-                 map_x.at<float>(j,i) = 2*( i - map_x.cols*0.25 ) + 0.5 ;
-                 map_y.at<float>(j,i) = 2*( j - map_x.rows*0.25 ) + 0.5 ;
-                }
-			} // end for i
-		} // end for j
-	} // end if
-	
-	if (vidlongi==4)
-	{
-		for( int j = 0; j < map_x.rows; j++ )
-		{ 
-			for( int i = 0; i < map_x.cols; i++ )
-			{
-				if( i > map_x.cols*0.5 &&  j > map_x.rows*0.5 )
-				{
-                 map_x.at<float>(j,i) = 2*( i - map_x.cols*0.25 ) + 0.5 ;
-                 map_y.at<float>(j,i) = 2*( j - map_x.rows*0.25 ) + 0.5 ;
-                }
-			} // end for i
-		} // end for j
-	} // end if
-
 }
 
 
@@ -139,6 +94,7 @@ int main(int argc,char *argv[])
 	std::string VidFileName[100];
 	std::string NAME;
 	int vidlongi[100];
+	int vidlati[100];
 	int vidw[100];
 	int looptemp=0;
 	cv::VideoCapture inputVideo[100];
@@ -191,6 +147,8 @@ int main(int argc,char *argv[])
 					VidFileName[i] = tempstring;
 					infile >> tempstring;
 					infile >> vidlongi[i];
+					infile >> tempstring;
+					infile >> vidlati[i];
 					infile >> tempstring;
 					infile >> vidw[i];
 					// dummy getline after the >> on previous line
@@ -264,6 +222,8 @@ int main(int argc,char *argv[])
 		VidFileName[looptemp] = escaped(std::string(OpenFileName));
 		std::cout << "Enter desired position for this video as degrees longitude, back = 0: ";
 		std::cin >> vidlongi[looptemp];
+		std::cout << "Enter desired height for this video as degrees latitude, horizon = 0: ";
+		std::cin >> vidlati[looptemp];
 		std::cout << "Enter desired width for this video in degrees: ";
 		std::cin >> vidw[looptemp];
 		
@@ -319,6 +279,8 @@ int main(int argc,char *argv[])
 		inioutfile << VidFileName[i] << std::endl;
 		inioutfile << "#vidlongi" << i << std::endl;
 		inioutfile << vidlongi[i] << std::endl;
+		inioutfile << "#vidlati" << i << std::endl;
+		inioutfile << vidlati[i] << std::endl;
 		inioutfile << "#vidw" << i << std::endl;
 		inioutfile << vidw[i] << std::endl;
 	}
@@ -345,11 +307,9 @@ int main(int argc,char *argv[])
 		map_y[i] = cv::Scalar((outputw+outputw)*10);
 		// initializing so that it points outside the image
 		// so that unavailable pixels will be black
-		update_map(vidlongi[i], vidw[i], map_x[i], map_y[i]);
+		update_map(vidlongi[i], vidlati[i], vidw[i], map_x[i], map_y[i]);
 		cv::convertMaps(map_x[i], map_y[i], dst_x[i], dst_y[i], CV_16SC2);	
 		// supposed to make it faster to remap
-	
-		
 	}
 	
 	t_start = time(NULL);
