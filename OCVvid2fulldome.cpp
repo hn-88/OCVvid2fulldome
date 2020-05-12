@@ -140,6 +140,7 @@ int main(int argc,char *argv[])
 	int vidw[100];
 	int looptemp=0;
 	cv::VideoCapture inputVideo[100];
+	bool inputEnded[100];
 	std::string escapedpath;
 	cv::VideoWriter outputVideo;
 	int  fps, key;
@@ -359,13 +360,30 @@ int main(int argc,char *argv[])
 		for (int i=0;i<numvids;i++)
 		{
 			inputVideo[i] >> src;              // read
-			if (src.empty()) break;         // check if at end
+			if (src.empty()) // check if at end
+			{
+				doneflag = 1;
+				//inputEnded[i]=1;
+				break; 
+			}
+			else
+			{
+				inputEnded[i]=0;				
+			}       
 			//imshow("Display",src);
 			cv::resize(src, res, Sout, 0, 0, cv::INTER_LINEAR);
 			cv::remap(res, dst2, dst_x[i], dst_y[i], cv::INTER_LINEAR, cv::BORDER_CONSTANT, cv::Scalar(0, 0, 0) );
 			dst = dst + dst2;
 			
 		}
+		
+		//~ doneflag = 1;
+		//~ for (int i=0;i<numvids;i++)
+		//~ {
+			//~ doneflag = doneflag & inputEnded[i];
+			//~ // doneflag = 1 when all inputs are Ended
+		//~ }
+		
 		
 		key = cv::waitKey(10);
 		
