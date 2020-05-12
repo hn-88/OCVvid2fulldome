@@ -17,7 +17,7 @@ rm -Rvf home
 
 # doing this copy so that ldd can find the libs for linuxdeployqt
 # https://www.hpc.dtu.dk/?page_id=1180
-sudo cp OpenCVLocal/lib/* /usr/local/lib/*
+sudo cp /home/travis/OpenCVLocal/lib/* /usr/local/lib/*
 
 
 
