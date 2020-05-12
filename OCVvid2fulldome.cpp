@@ -353,6 +353,11 @@ int main(int argc,char *argv[])
 	t_start = time(NULL);
 	fps = 0;
 	
+	for (int i=0;i<numvids;i++)
+	{
+		inputEnded[i]=0;
+	}
+	
 	while(1)
 	{
 		dst = cv::Mat::zeros(Sout, CV_8UC3);
@@ -362,27 +367,26 @@ int main(int argc,char *argv[])
 			inputVideo[i] >> src;              // read
 			if (src.empty()) // check if at end
 			{
-				doneflag = 1;
-				//inputEnded[i]=1;
-				break; 
+				inputEnded[i]=1;
+				
 			}
 			else
 			{
-				inputEnded[i]=0;				
-			}       
+			//	inputEnded[i]=0;	
 			//imshow("Display",src);
 			cv::resize(src, res, Sout, 0, 0, cv::INTER_LINEAR);
 			cv::remap(res, dst2, dst_x[i], dst_y[i], cv::INTER_LINEAR, cv::BORDER_CONSTANT, cv::Scalar(0, 0, 0) );
 			dst = dst + dst2;
+			}
 			
 		}
 		
-		//~ doneflag = 1;
-		//~ for (int i=0;i<numvids;i++)
-		//~ {
-			//~ doneflag = doneflag & inputEnded[i];
-			//~ // doneflag = 1 when all inputs are Ended
-		//~ }
+		doneflag = 1;
+		for (int i=0;i<numvids;i++)
+		{
+			doneflag = doneflag && inputEnded[i];
+			// doneflag = 1 when all inputs are Ended
+		}
 		
 		
 		key = cv::waitKey(10);
