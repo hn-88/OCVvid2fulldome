@@ -107,10 +107,10 @@ void update_map( int vidlongi, int vidlati, int vidw, float aspectratio, cv::Mat
 			&& j > topmargin )
 			{
 			 //~ resiz_x.at<float>(j,i) = (i-leftmargin)/resizeratiox; // x*resizeratio + leftmargin = i
-			 //~ resiz_y.at<float>(j,i) = (j-topmargin)/resizeratioy  ;
+			 resiz_y.at<float>(j,i) = (j-topmargin)/resizeratioy  ;
 			 // we want the image flipped up down / lr from the above.
 			 resiz_x.at<float>(j,i) = map_x.cols - (i-leftmargin)/resizeratiox;
-			 resiz_y.at<float>(j,i) = map_x.rows - (j-topmargin)/resizeratioy;
+			 //~ resiz_y.at<float>(j,i) = map_x.rows - (j-topmargin)/resizeratioy;
 
 			}
 			
@@ -137,8 +137,8 @@ void update_map( int vidlongi, int vidlati, int vidw, float aspectratio, cv::Mat
 			phiang = rad_per_px * rd + angleyrad; // this zooms in/out, not rotate cam
 			phiang = rad_per_px * rd;
 			
-			mapf_x.at<float>(i, j) = (float)round((map_x.cols/2) + theta * px_per_theta);
-			mapf_y.at<float>(i, j) = phiang * px_per_phi;
+			mapf_x.at<float>(i, j) = abs((float)round((map_x.cols/2) + theta * px_per_theta));
+			mapf_y.at<float>(i, j) = abs(phiang * px_per_phi);
 				
 		} // end for i
 	} // end for j
@@ -438,6 +438,7 @@ int main(int argc,char *argv[])
 				cv::convertMaps(map_x[i], map_y[i], dst_x[i], dst_y[i], CV_16SC2);	
 				// supposed to make it faster to remap
 			}
+			interactivemode = 0;
 		}
 		
 		if(showdisplay)
