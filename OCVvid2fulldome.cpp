@@ -58,37 +58,98 @@ std::string escaped(const std::string& input)
     return output;
 }
 
-void update_map( int vidlongi, int vidlati, int vidw, cv::Mat &map_x, cv::Mat &map_y )
+void update_map( int vidlongi, int vidlati, int vidw, float aspectratio, cv::Mat &map_x, cv::Mat &map_y )
 {
 	float angleyrad = (float)vidlati*CV_PI/180;
 	float anglexrad = (float)vidlongi*CV_PI/180;
-	float resizeratio = (float)vidw/360;
-	float rrinv = 1/resizeratio;
-	float oneminusrrby2 = (1 - resizeratio)/2;
-	float rrby2 = resizeratio/2;
 	
-	// debug
-	std::cout << resizeratio << " " << rrinv << std::endl;
+	// for the mapping to centre / resized
+	int vidwpixels = round(((float)vidw/360.0) * map_x.cols);
+	int vidhpixels = round((float)vidwpixels / aspectratio);
+	int leftmargin = round((float)(map_x.cols - vidwpixels) / 2);
+	int rightmargin = leftmargin + vidwpixels;
+	int topmargin = round((float)(map_x.rows - vidhpixels) / 2);
+	int bottommargin = topmargin + vidhpixels;
+	// OpenCV (0,0) is top left. 
+	float resizeratiox = (float)vidwpixels / (float) map_x.cols;
+	float resizeratioy = (float)vidhpixels / (float) map_x.rows;
+	
+	// create intermediate maps
+	cv::Mat resiz_x, resiz_y, mapf_x, mapf_y;
+	map_x.copyTo(resiz_x);
+	map_x.copyTo(resiz_y);
+	map_x.copyTo(mapf_x);
+	map_x.copyTo(mapf_y);
 		
-	for(int j = 0; j < map_x.rows; j++ )
+	// for the mapping from equi to fisheye
+	int xcd = floor(map_x.cols/2) - 1 ;
+	int ycd = floor(map_x.rows/2) - 1 ;
+	float halfcols = map_x.cols/2;
+	float halfrows = map_x.rows/2;
+		
+	float longi, lat, Px, Py, Pz, theta;						// X and Y are map_x and map_y
+	float xfish, yfish, rfish, phi, xequi, yequi;
+	float PxR, PyR, PzR;
+	float aperture = CV_PI;
+		
+	for(int j = 0; j < map_x.rows; j++ )	// j is for y, i is for x
 	{ 
 		for( int i = 0; i < map_x.cols; i++ )
 		{
-			if( i < map_x.cols*oneminusrrby2 
-			&& i > map_x.cols*rrby2 
-			&& j < map_x.rows*oneminusrrby2 
-			&& j > map_x.rows*rrby2 )
+			if( i < rightmargin 
+			&& i > leftmargin 
+			&& j < bottommargin 
+			&& j > topmargin )
 			{
-			 map_x.at<float>(j,i) = 2*( i - map_x.cols*resizeratio/2 ) + 0.5  ;
-			 map_y.at<float>(j,i) = 2*( j - map_x.rows*resizeratio/2 ) + 0.5 ;
+			 resiz_x.at<float>(j,i) = (i-leftmargin)/resizeratiox; // x*resizeratio + leftmargin = i
+			 resiz_y.at<float>(j,i) = (j-topmargin)/resizeratioy  ;
 			 // debug
 			 //~ std::cout << i << " " << j << " ";
 			 //~ std::cout << map_x.at<float>(j,i) << " " << map_y.at<float>(j,i) << std::endl;
 			}
+			
+			// resiz_x to map_x mapping as in OCVWarp transformtype=1.
+			
+			xfish = (i - xcd) / halfcols;
+			yfish = (j - ycd) / halfrows;
+			rfish = sqrt(xfish*xfish + yfish*yfish);
+			theta = atan2(yfish, xfish);
+			phi = rfish*aperture/2;
+			
+			// standard co-ords - this is suitable when phi=pi/2 is Pz=0
+			Px = sin(phi)*cos(theta);
+			Py = sin(phi)*sin(theta);
+			Pz = cos(phi);
+			
+			if(angleyrad!=0 || anglexrad!=0)
+			{
+				// cos(angleyrad), 0, sin(angleyrad), 0, 1, 0, -sin(angleyrad), 0, cos(angleyrad));
+				
+				PxR = Px;
+				PyR = cos(angleyrad) * Py - sin(angleyrad) * Pz;
+				PzR = sin(angleyrad) * Py + cos(angleyrad) * Pz;
+				
+				Px = cos(anglexrad) * PxR - sin(anglexrad) * PyR;
+				Py = sin(anglexrad) * PxR + cos(anglexrad) * PyR;
+				Pz = PzR;
+			}
+						
+			longi 	= atan2(Py, Px);
+			lat	 	= atan2(Pz,sqrt(Px*Px + Py*Py));	
+			
+			xequi = longi / CV_PI;
+			// this maps to [-1, 1]
+			yequi = 2*lat / CV_PI;
+			// this maps to [-1, 0] for south pole
+			
+			mapf_x.at<float>(i, j) =  abs(xequi * map_x.cols / 2 + xcd);
+			mapf_y.at<float>(i, j) =  yequi * map_x.rows / 2 + ycd;
+					
 		} // end for i
 	} // end for j
 	
-	
+	cv::remap(resiz_x, map_x, mapf_x, mapf_y, cv::INTER_LINEAR, cv::BORDER_CONSTANT, cv::Scalar(0, 0, 0) );
+	cv::remap(resiz_y, map_y, mapf_x, mapf_y, cv::INTER_LINEAR, cv::BORDER_CONSTANT, cv::Scalar(0, 0, 0) );
 }
 
 
@@ -106,6 +167,7 @@ int main(int argc,char *argv[])
 	int vidlongi[100];
 	int vidlati[100];
 	int vidw[100];
+	float aspectratio;
 	int looptemp=0;
 	cv::VideoCapture inputVideo[100];
 	bool inputEnded[100];
@@ -313,13 +375,18 @@ int main(int argc,char *argv[])
 		//std::cout<<VidFileName[i]<<" " << vidlongi[i] << " " << vidw[i] << std::endl;
 		escapedpath = VidFileName[i];
 		inputVideo[i] = cv::VideoCapture(escapedpath);
+		inputVideo[i] >> src;
+		aspectratio = (float)src.cols / (float)src.rows; // assuming square pixels
+		inputVideo[i].set(cv::CAP_PROP_POS_FRAMES, 0);
+		// reset the video to the first frame.
+				
 		map_x[i] = cv::Mat(Sout, CV_32FC1);
 		map_y[i] = cv::Mat(Sout, CV_32FC1);
 		map_x[i] = cv::Scalar((outputw+outputw)*10);
 		map_y[i] = cv::Scalar((outputw+outputw)*10);
 		// initializing so that it points outside the image
 		// so that unavailable pixels will be black
-		update_map(vidlongi[i], vidlati[i], vidw[i], map_x[i], map_y[i]);
+		update_map(vidlongi[i], vidlati[i], vidw[i], aspectratio, map_x[i], map_y[i]);
 		cv::convertMaps(map_x[i], map_y[i], dst_x[i], dst_y[i], CV_16SC2);	
 		// supposed to make it faster to remap
 	}
