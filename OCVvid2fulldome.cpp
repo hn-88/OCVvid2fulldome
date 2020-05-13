@@ -101,11 +101,12 @@ void update_map( int vidlongi, int vidlati, int vidw, float aspectratio, cv::Mat
 			&& j < bottommargin 
 			&& j > topmargin )
 			{
-			 resiz_x.at<float>(j,i) = (i-leftmargin)/resizeratiox; // x*resizeratio + leftmargin = i
-			 resiz_y.at<float>(j,i) = (j-topmargin)/resizeratioy  ;
-			 // debug
-			 //~ std::cout << i << " " << j << " ";
-			 //~ std::cout << map_x.at<float>(j,i) << " " << map_y.at<float>(j,i) << std::endl;
+			 //~ resiz_x.at<float>(j,i) = (i-leftmargin)/resizeratiox; // x*resizeratio + leftmargin = i
+			 //~ resiz_y.at<float>(j,i) = (j-topmargin)/resizeratioy  ;
+			 // we want the image flipped up down / lr from the above.
+			 resiz_x.at<float>(j,i) = map_x.cols - (i-leftmargin)/resizeratiox;
+			 resiz_y.at<float>(j,i) = map_x.rows - (j-topmargin)/resizeratioy;
+
 			}
 			
 			// resiz_x to map_x mapping as in OCVWarp transformtype=1.
@@ -142,8 +143,13 @@ void update_map( int vidlongi, int vidlati, int vidw, float aspectratio, cv::Mat
 			yequi = 2*lat / CV_PI;
 			// this maps to [-1, 0] for south pole
 			
-			mapf_x.at<float>(i, j) =  abs(xequi * map_x.cols / 2 + xcd);
-			mapf_y.at<float>(i, j) =  yequi * map_x.rows / 2 + ycd;
+			mapf_x.at<float>(j, i) =  abs(xequi * map_x.cols / 2 + xcd);
+			mapf_y.at<float>(j, i) =  yequi * map_x.rows / 2 + ycd;
+			
+			// debug
+			//~ mapf_x.at<float>(j, i) = map_x.cols-i;
+			//~ mapf_y.at<float>(j, i) = map_x.rows-j;
+			
 					
 		} // end for i
 	} // end for j
