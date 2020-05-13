@@ -60,8 +60,8 @@ std::string escaped(const std::string& input)
 
 void update_map( int vidlongi, int vidlati, int vidw, float aspectratio, cv::Mat &map_x, cv::Mat &map_y )
 {
-	float angleyrad = -(float)vidlati*CV_PI/180;	// need the minus
-	float anglexrad = (float)(vidlongi+180)*CV_PI/180;	// and other manipulations 
+	float angleyrad = (float)(vidlati-45)*CV_PI/180;	
+	float anglexrad = (float)(vidlongi+180)*CV_PI/180;	// some manipulations 
 	// to get to the correct place
 	
 	float mapoutside = (map_x.rows+map_x.cols)*10.0;
@@ -137,9 +137,8 @@ void update_map( int vidlongi, int vidlati, int vidw, float aspectratio, cv::Mat
 			theta = theta - CV_PI;	
 			
 			phiang = rad_per_px * rd + angleyrad; // this zooms in/out, not rotate cam
-			phiang = rad_per_px * rd;
 			
-			if(rd <= xcd)
+			if ( (rd <= xcd) && (phiang > 0) )
 			{
 				mapf_x.at<float>(j, i) = (float)(map_x.cols/2) + theta * px_per_theta;
 				mapf_y.at<float>(j, i) = phiang * px_per_phi;
@@ -156,10 +155,12 @@ void update_map( int vidlongi, int vidlati, int vidw, float aspectratio, cv::Mat
 	{ 
 		for( int i = 0; i < map_x.cols; i++ )
 		{
-			xd = i - xcd;
-			yd = j - ycd;
-			rd = sqrt(float(xd*xd + yd*yd));
-			if(rd > xcd)
+			if( (map_x.at<float>(j, i) == 0) && (map_y.at<float>(j, i) == 0) )
+			
+			//~ xd = i - xcd;
+			//~ yd = j - ycd;
+			//~ rd = sqrt(float(xd*xd + yd*yd));
+			//~ if(rd > xcd)
 			{
 				map_x.at<float>(j, i) = mapoutside;
 				map_y.at<float>(j, i) = mapoutside;
