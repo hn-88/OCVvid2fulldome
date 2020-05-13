@@ -61,8 +61,10 @@ std::string escaped(const std::string& input)
 void update_map( int vidlongi, int vidlati, int vidw, float aspectratio, cv::Mat &map_x, cv::Mat &map_y )
 {
 	float angleyrad = -(float)vidlati*CV_PI/180;	// need the minus
-	float anglexrad = (float)(vidlongi+90)*CV_PI/180;	// and other manipulations 
+	float anglexrad = (float)(vidlongi+180)*CV_PI/180;	// and other manipulations 
 	// to get to the correct place
+	
+	float mapoutside = (map_x.rows+map_x.cols)*10.0;
 	
 	// for the mapping to centre / resized
 	int vidwpixels = round(((float)vidw/360.0) * map_x.cols);
@@ -106,10 +108,10 @@ void update_map( int vidlongi, int vidlati, int vidw, float aspectratio, cv::Mat
 			&& j < bottommargin 
 			&& j > topmargin )
 			{
-			 //~ resiz_x.at<float>(j,i) = (i-leftmargin)/resizeratiox; // x*resizeratio + leftmargin = i
+			 resiz_x.at<float>(j,i) = (i-leftmargin)/resizeratiox; // x*resizeratio + leftmargin = i
 			 resiz_y.at<float>(j,i) = (j-topmargin)/resizeratioy  ;
 			 // we want the image flipped up down / lr from the above.
-			 resiz_x.at<float>(j,i) = map_x.cols - (i-leftmargin)/resizeratiox;
+			 //~ resiz_x.at<float>(j,i) = map_x.cols - (i-leftmargin)/resizeratiox;
 			 //~ resiz_y.at<float>(j,i) = map_x.rows - (j-topmargin)/resizeratioy;
 
 			}
@@ -137,14 +139,34 @@ void update_map( int vidlongi, int vidlati, int vidw, float aspectratio, cv::Mat
 			phiang = rad_per_px * rd + angleyrad; // this zooms in/out, not rotate cam
 			phiang = rad_per_px * rd;
 			
-			mapf_x.at<float>(i, j) = abs((float)round((map_x.cols/2) + theta * px_per_theta));
-			mapf_y.at<float>(i, j) = abs(phiang * px_per_phi);
+			if(rd <= xcd)
+			{
+				mapf_x.at<float>(j, i) = (float)(map_x.cols/2) + theta * px_per_theta;
+				mapf_y.at<float>(j, i) = phiang * px_per_phi;
+			}
 				
 		} // end for i
 	} // end for j
 	
-	cv::remap(resiz_x, map_x, mapf_x, mapf_y, cv::INTER_LINEAR, cv::BORDER_CONSTANT, cv::Scalar(0, 0, 0) );
-	cv::remap(resiz_y, map_y, mapf_x, mapf_y, cv::INTER_LINEAR, cv::BORDER_CONSTANT, cv::Scalar(0, 0, 0) );
+	cv::remap(resiz_x, map_x, mapf_x, mapf_y, cv::INTER_LINEAR );
+	cv::remap(resiz_y, map_y, mapf_x, mapf_y, cv::INTER_LINEAR );
+	// here, the remap function maps undefined points of map_x, map_y to (0,0)
+	// this is manually corrected below.
+	for(int j = 0; j < map_x.rows; j++ )	// j is for y, i is for x
+	{ 
+		for( int i = 0; i < map_x.cols; i++ )
+		{
+			xd = i - xcd;
+			yd = j - ycd;
+			rd = sqrt(float(xd*xd + yd*yd));
+			if(rd > xcd)
+			{
+				map_x.at<float>(j, i) = mapoutside;
+				map_y.at<float>(j, i) = mapoutside;
+			}
+		}
+	}
+	
 }
 
 
@@ -162,7 +184,7 @@ int main(int argc,char *argv[])
 	int vidlongi[100];
 	int vidlati[100];
 	int vidw[100];
-	float aspectratio;
+	float aspectratio[100];
 	int looptemp=0;
 	cv::VideoCapture inputVideo[100];
 	bool inputEnded[100];
@@ -371,7 +393,7 @@ int main(int argc,char *argv[])
 		escapedpath = VidFileName[i];
 		inputVideo[i] = cv::VideoCapture(escapedpath);
 		inputVideo[i] >> src;
-		aspectratio = (float)src.cols / (float)src.rows; // assuming square pixels
+		aspectratio[i] = (float)src.cols / (float)src.rows; // assuming square pixels
 		inputVideo[i].set(cv::CAP_PROP_POS_FRAMES, 0);
 		// reset the video to the first frame.
 				
@@ -381,7 +403,7 @@ int main(int argc,char *argv[])
 		map_y[i] = cv::Scalar((outputw+outputw)*10);
 		// initializing so that it points outside the image
 		// so that unavailable pixels will be black
-		update_map(vidlongi[i], vidlati[i], vidw[i], aspectratio, map_x[i], map_y[i]);
+		update_map(vidlongi[i], vidlati[i], vidw[i], aspectratio[i], map_x[i], map_y[i]);
 		cv::convertMaps(map_x[i], map_y[i], dst_x[i], dst_y[i], CV_16SC2);	
 		// supposed to make it faster to remap
 	}
@@ -429,17 +451,6 @@ int main(int argc,char *argv[])
 		
 		
 		key = cv::waitKey(10);
-		
-		if(interactivemode)
-        {
-			for (int i=0;i<numvids;i++)
-			{
-				update_map(vidlongi[i], vidlati[i], vidw[i], aspectratio, map_x[i], map_y[i]);
-				cv::convertMaps(map_x[i], map_y[i], dst_x[i], dst_y[i], CV_16SC2);	
-				// supposed to make it faster to remap
-			}
-			interactivemode = 0;
-		}
 		
 		if(showdisplay)
 			cv::imshow("Display", dst);
@@ -501,7 +512,7 @@ int main(int argc,char *argv[])
 				case ']':	// increase anglex
 					for (int i=0;i<numvids;i++)
 					{
-						vidlati[i]=vidlongi[i] + 1;
+						vidlongi[i]=vidlongi[i] + 1;
 					}
 					interactivemode = 1;
 					break;
@@ -511,7 +522,7 @@ int main(int argc,char *argv[])
 				case '[':	// decrease anglex
 					for (int i=0;i<numvids;i++)
 					{
-						vidlati[i]=vidlongi[i] - 1;
+						vidlongi[i]=vidlongi[i] - 1;
 					}
 					interactivemode = 1;
 					break;
@@ -538,7 +549,7 @@ int main(int argc,char *argv[])
 					// increase anglex
 					for (int i=0;i<numvids;i++)
 					{
-						vidlati[i]=vidlongi[i] + 10;
+						vidlongi[i]=vidlongi[i] + 10;
 					}
 					interactivemode = 1;
 					break;
@@ -547,7 +558,7 @@ int main(int argc,char *argv[])
 					// decrease anglex
 					for (int i=0;i<numvids;i++)
 					{
-						vidlati[i]=vidlongi[i] - 10;
+						vidlongi[i]=vidlongi[i] - 10;
 					}
 					interactivemode = 1;
 					break;	
@@ -570,6 +581,19 @@ int main(int argc,char *argv[])
 		if (doneflag == 1)
 		{
 			break;
+		}
+		
+		if(interactivemode == 1)
+        {
+			for (int i=0;i<numvids;i++)
+			{
+				map_x[i] = cv::Scalar((outputw+outputw)*10);
+				map_y[i] = cv::Scalar((outputw+outputw)*10);
+				update_map(vidlongi[i], vidlati[i], vidw[i], aspectratio[i], map_x[i], map_y[i]);
+				cv::convertMaps(map_x[i], map_y[i], dst_x[i], dst_y[i], CV_16SC2);	
+				// supposed to make it faster to remap
+			}
+			interactivemode = 0;
 		}
         
 			
