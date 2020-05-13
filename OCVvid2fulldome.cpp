@@ -60,8 +60,9 @@ std::string escaped(const std::string& input)
 
 void update_map( int vidlongi, int vidlati, int vidw, float aspectratio, cv::Mat &map_x, cv::Mat &map_y )
 {
-	float angleyrad = (float)vidlati*CV_PI/180;
-	float anglexrad = (float)vidlongi*CV_PI/180;
+	float angleyrad = -(float)vidlati*CV_PI/180;	// need the minus
+	float anglexrad = (float)(vidlongi+90)*CV_PI/180;	// and other manipulations 
+	// to get to the correct place
 	
 	// for the mapping to centre / resized
 	int vidwpixels = round(((float)vidw/360.0) * map_x.cols);
@@ -82,16 +83,20 @@ void update_map( int vidlongi, int vidlati, int vidw, float aspectratio, cv::Mat
 	map_x.copyTo(mapf_y);
 		
 	// for the mapping from equi to fisheye
+	// changed to pano2fisheye code for zoom in / out effect
 	int xcd = floor(map_x.cols/2) - 1 ;
 	int ycd = floor(map_x.rows/2) - 1 ;
-	float halfcols = map_x.cols/2;
-	float halfrows = map_x.rows/2;
 		
-	float longi, lat, Px, Py, Pz, theta;						// X and Y are map_x and map_y
-	float xfish, yfish, rfish, phi, xequi, yequi;
-	float PxR, PyR, PzR;
-	float aperture = CV_PI;
-		
+	int xd, yd;
+	float px_per_theta = map_x.cols / (2*CV_PI);
+	float px_per_phi   = map_x.rows / (CV_PI/2);
+	// compute destination radius and theta 
+	float rd; // = sqrt(x^2+y^2);
+	float theta; //= atan2(y,x);
+	float rad_per_px = CV_PI / map_x.rows;
+	float phiang;     // = rad_per_px * rd;
+	
+					
 	for(int j = 0; j < map_x.rows; j++ )	// j is for y, i is for x
 	{ 
 		for( int i = 0; i < map_x.cols; i++ )
@@ -109,48 +114,32 @@ void update_map( int vidlongi, int vidlati, int vidw, float aspectratio, cv::Mat
 
 			}
 			
-			// resiz_x to map_x mapping as in OCVWarp transformtype=1.
+			// resiz_x to map_x mapping as in OCVWarp (old version) transformtype=0.
 			
-			xfish = (i - xcd) / halfcols;
-			yfish = (j - ycd) / halfrows;
-			rfish = sqrt(xfish*xfish + yfish*yfish);
-			theta = atan2(yfish, xfish);
-			phi = rfish*aperture/2;
-			
-			// standard co-ords - this is suitable when phi=pi/2 is Pz=0
-			Px = sin(phi)*cos(theta);
-			Py = sin(phi)*sin(theta);
-			Pz = cos(phi);
-			
-			if(angleyrad!=0 || anglexrad!=0)
+			xd = i - xcd;
+			yd = j - ycd;
+			if (xd == 0 && yd == 0)
 			{
-				// cos(angleyrad), 0, sin(angleyrad), 0, 1, 0, -sin(angleyrad), 0, cos(angleyrad));
-				
-				PxR = Px;
-				PyR = cos(angleyrad) * Py - sin(angleyrad) * Pz;
-				PzR = sin(angleyrad) * Py + cos(angleyrad) * Pz;
-				
-				Px = cos(anglexrad) * PxR - sin(anglexrad) * PyR;
-				Py = sin(anglexrad) * PxR + cos(anglexrad) * PyR;
-				Pz = PzR;
+				theta = 0 + anglexrad;
+				rd = 0;
 			}
-						
-			longi 	= atan2(Py, Px);
-			lat	 	= atan2(Pz,sqrt(Px*Px + Py*Py));	
+			else
+			{
+				theta = atan2(xd,yd) + anglexrad; 
+				rd = sqrt(float(xd*xd + yd*yd));
+			}
+			// move theta to [-pi, pi]
+			theta = fmod(theta+CV_PI, 2*CV_PI);
+			if (theta < 0)
+				theta = theta + CV_PI;
+			theta = theta - CV_PI;	
 			
-			xequi = longi / CV_PI;
-			// this maps to [-1, 1]
-			yequi = 2*lat / CV_PI;
-			// this maps to [-1, 0] for south pole
+			phiang = rad_per_px * rd + angleyrad; // this zooms in/out, not rotate cam
+			phiang = rad_per_px * rd;
 			
-			mapf_x.at<float>(j, i) =  abs(xequi * map_x.cols / 2 + xcd);
-			mapf_y.at<float>(j, i) =  yequi * map_x.rows / 2 + ycd;
-			
-			// debug
-			//~ mapf_x.at<float>(j, i) = map_x.cols-i;
-			//~ mapf_y.at<float>(j, i) = map_x.rows-j;
-			
-					
+			mapf_x.at<float>(i, j) = (float)round((map_x.cols/2) + theta * px_per_theta);
+			mapf_y.at<float>(i, j) = phiang * px_per_phi;
+				
 		} // end for i
 	} // end for j
 	
@@ -162,7 +151,7 @@ void update_map( int vidlongi, int vidlati, int vidw, float aspectratio, cv::Mat
 int main(int argc,char *argv[])
 {
 	bool doneflag = 0;
-	bool showdisplay = 1;
+	bool showdisplay = 1, interactivemode=0;
 	bool skipinputs = 0;
 	int outputw, outputfps;
 	char outputfourcc[5] = {'X','V','I','D', '\0'};
@@ -441,6 +430,16 @@ int main(int argc,char *argv[])
 		
 		key = cv::waitKey(10);
 		
+		if(interactivemode)
+        {
+			for (int i=0;i<numvids;i++)
+			{
+				update_map(vidlongi[i], vidlati[i], vidw[i], aspectratio, map_x[i], map_y[i]);
+				cv::convertMaps(map_x[i], map_y[i], dst_x[i], dst_y[i], CV_16SC2);	
+				// supposed to make it faster to remap
+			}
+		}
+		
 		if(showdisplay)
 			cv::imshow("Display", dst);
 			
@@ -476,6 +475,81 @@ int main(int argc,char *argv[])
 					doneflag = 1;
 					break;
 
+				case 'u':
+				case '+':
+				case '=':	// increase angley
+					for (int i=0;i<numvids;i++)
+					{
+						vidlati[i]=vidlati[i] + 1;
+					}
+					interactivemode = 1;
+					break;
+					
+				case 'm':
+				case '-':
+				case '_':	// decrease angley
+					for (int i=0;i<numvids;i++)
+					{
+						vidlati[i]=vidlati[i] - 1;
+					}
+					interactivemode = 1;
+					break;
+					
+				case 'k':
+				case '}':
+				case ']':	// increase anglex
+					for (int i=0;i<numvids;i++)
+					{
+						vidlati[i]=vidlongi[i] + 1;
+					}
+					interactivemode = 1;
+					break;
+					
+				case 'h':
+				case '{':
+				case '[':	// decrease anglex
+					for (int i=0;i<numvids;i++)
+					{
+						vidlati[i]=vidlongi[i] - 1;
+					}
+					interactivemode = 1;
+					break;
+				
+				case 'U':
+					// increase angley
+					for (int i=0;i<numvids;i++)
+					{
+						vidlati[i]=vidlati[i] + 10;
+					}
+					interactivemode = 1;
+					break;
+					
+				case 'M':
+					// decrease angley
+					for (int i=0;i<numvids;i++)
+					{
+						vidlati[i]=vidlati[i] - 10;
+					}
+					interactivemode = 1;
+					break;
+					
+				case 'K':
+					// increase anglex
+					for (int i=0;i<numvids;i++)
+					{
+						vidlati[i]=vidlongi[i] + 10;
+					}
+					interactivemode = 1;
+					break;
+					
+				case 'H':
+					// decrease anglex
+					for (int i=0;i<numvids;i++)
+					{
+						vidlati[i]=vidlongi[i] - 10;
+					}
+					interactivemode = 1;
+					break;	
 					
 				case 'D':
 				case 'd':
@@ -488,6 +562,7 @@ int main(int argc,char *argv[])
 					
 				default:
 					break;
+				
 				
 				}
 				
