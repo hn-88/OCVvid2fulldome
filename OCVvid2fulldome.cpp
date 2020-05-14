@@ -60,7 +60,7 @@ std::string escaped(const std::string& input)
 
 void update_map( int vidlongi, int vidlati, int vidw, float aspectratio, cv::Mat &map_x, cv::Mat &map_y )
 {
-	float angleyrad = (float)(vidlati-45)*CV_PI/180;	
+	float angleyrad = -(float)(vidlati)*CV_PI/180;	
 	float anglexrad = (float)(vidlongi+180)*CV_PI/180;	// some manipulations 
 	// to get to the correct place
 	
@@ -85,18 +85,16 @@ void update_map( int vidlongi, int vidlati, int vidw, float aspectratio, cv::Mat
 	map_x.copyTo(mapf_y);
 		
 	// for the mapping from equi to fisheye
-	// changed to pano2fisheye code for zoom in / out effect
 	int xcd = floor(map_x.cols/2) - 1 ;
 	int ycd = floor(map_x.rows/2) - 1 ;
-		
-	int xd, yd;
-	float px_per_theta = map_x.cols / (2*CV_PI);
-	float px_per_phi   = map_x.rows / (CV_PI/2);
-	// compute destination radius and theta 
-	float rd; // = sqrt(x^2+y^2);
-	float theta; //= atan2(y,x);
-	float rad_per_px = CV_PI / map_x.rows;
-	float phiang;     // = rad_per_px * rd;
+	float halfcols = map_x.cols/2;
+	float halfrows = map_x.rows/2;
+	
+	
+	float longi, lat, Px, Py, Pz, theta;						// X and Y are map_x and map_y
+	float xfish, yfish, rfish, phi, xequi, yequi;
+	float PxR, PyR, PzR;
+	float aperture = CV_PI;
 	
 					
 	for(int j = 0; j < map_x.rows; j++ )	// j is for y, i is for x
@@ -108,41 +106,58 @@ void update_map( int vidlongi, int vidlati, int vidw, float aspectratio, cv::Mat
 			&& j < bottommargin 
 			&& j > topmargin )
 			{
-			 resiz_x.at<float>(j,i) = (i-leftmargin)/resizeratiox; // x*resizeratio + leftmargin = i
-			 resiz_y.at<float>(j,i) = (j-topmargin)/resizeratioy  ;
-			 // we want the image flipped up down / lr from the above.
-			 //~ resiz_x.at<float>(j,i) = map_x.cols - (i-leftmargin)/resizeratiox;
-			 //~ resiz_y.at<float>(j,i) = map_x.rows - (j-topmargin)/resizeratioy;
+			 //~ resiz_x.at<float>(j,i) = (i-leftmargin)/resizeratiox; // x*resizeratio + leftmargin = i
+			 //~ resiz_y.at<float>(j,i) = (j-topmargin)/resizeratioy  ;
+			 // if we want the image flipped up down / lr from the above.
+			 resiz_x.at<float>(j,i) = map_x.cols - (i-leftmargin)/resizeratiox;
+			 resiz_y.at<float>(j,i) = map_x.rows - (j-topmargin)/resizeratioy;
 
 			}
 			
-			// resiz_x to map_x mapping as in OCVWarp (old version) transformtype=0.
+			// resiz_x to map_x mapping as in OCVWarp transformtype=1.
+			xfish = (i - xcd) / halfcols;
+			yfish = (j - ycd) / halfrows;
+			rfish = sqrt(xfish*xfish + yfish*yfish);
+			theta = atan2(yfish, xfish);
+			phi = rfish*aperture/2;
 			
-			xd = i - xcd;
-			yd = j - ycd;
-			if (xd == 0 && yd == 0)
-			{
-				theta = 0 + anglexrad;
-				rd = 0;
-			}
-			else
-			{
-				theta = atan2(xd,yd) + anglexrad; 
-				rd = sqrt(float(xd*xd + yd*yd));
-			}
-			// move theta to [-pi, pi]
-			theta = fmod(theta+CV_PI, 2*CV_PI);
-			if (theta < 0)
-				theta = theta + CV_PI;
-			theta = theta - CV_PI;	
+			Px = sin(phi)*cos(theta);
+			Py = sin(phi)*sin(theta);
+			Pz = cos(phi);
 			
-			phiang = rad_per_px * rd + angleyrad; // this zooms in/out, not rotate cam
-			
-			if ( (rd <= xcd) && (phiang > 0) )
+			if(angleyrad!=0 || anglexrad!=0)
 			{
-				mapf_x.at<float>(j, i) = (float)(map_x.cols/2) + theta * px_per_theta;
-				mapf_y.at<float>(j, i) = phiang * px_per_phi;
+				// cos(angleyrad), 0, sin(angleyrad), 0, 1, 0, -sin(angleyrad), 0, cos(angleyrad));
+				
+				PxR = Px;
+				PyR = cos(angleyrad) * Py - sin(angleyrad) * Pz;
+				PzR = sin(angleyrad) * Py + cos(angleyrad) * Pz;
+				
+				Px = cos(anglexrad) * PxR - sin(anglexrad) * PyR;
+				Py = sin(anglexrad) * PxR + cos(anglexrad) * PyR;
+				Pz = PzR;
 			}
+			
+			
+			longi 	= atan2(Py, Px);
+			lat	 	= atan2(Pz,sqrt(Px*Px + Py*Py));	
+			
+			xequi = longi / CV_PI;
+			// this maps to [-1, 1]
+			yequi = 2*lat / CV_PI;
+			// this maps to [-1, 0] for south pole
+			
+			mapf_x.at<float>(i, j) =  abs(xequi * map_x.cols / 2 + xcd);
+			mapf_y.at<float>(i, j) =  yequi * map_x.rows / 2 + ycd;
+			
+	
+			//~ phiang = rad_per_px * rd + angleyrad; // this zooms in/out, not rotate cam
+			
+			//~ if ( (rd <= xcd) && (phiang > 0) )
+			//~ {
+				//~ mapf_x.at<float>(j, i) = (float)(map_x.cols/2) + theta * px_per_theta;
+				//~ mapf_y.at<float>(j, i) = phiang * px_per_phi;
+			//~ }
 				
 		} // end for i
 	} // end for j
@@ -167,7 +182,7 @@ void update_map( int vidlongi, int vidlati, int vidw, float aspectratio, cv::Mat
 			}
 		}
 	}
-	
+		
 }
 
 
@@ -407,6 +422,7 @@ int main(int argc,char *argv[])
 		update_map(vidlongi[i], vidlati[i], vidw[i], aspectratio[i], map_x[i], map_y[i]);
 		cv::convertMaps(map_x[i], map_y[i], dst_x[i], dst_y[i], CV_16SC2);	
 		// supposed to make it faster to remap
+		std::cout<<"\r"<<"Vid"<<i<<" x:"<<vidlongi[i]<<" y:"<<vidlati[i]<<std::flush;;
 	}
 	
 	t_start = time(NULL);
@@ -593,6 +609,8 @@ int main(int argc,char *argv[])
 				update_map(vidlongi[i], vidlati[i], vidw[i], aspectratio[i], map_x[i], map_y[i]);
 				cv::convertMaps(map_x[i], map_y[i], dst_x[i], dst_y[i], CV_16SC2);	
 				// supposed to make it faster to remap
+				std::cout<<"\r"<<"Vid"<<i<<" x:"<<vidlongi[i]<<" y:"<<vidlati[i]<<std::flush;;
+				
 			}
 			interactivemode = 0;
 		}
