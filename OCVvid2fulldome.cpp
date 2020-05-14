@@ -60,7 +60,7 @@ std::string escaped(const std::string& input)
 
 void update_map( int vidlongi, int vidlati, int vidw, float aspectratio, cv::Mat &map_x, cv::Mat &map_y )
 {
-	float angleyrad = -(float)(vidlati)*CV_PI/180;	
+	float angleyrad = (float)(vidlati)*CV_PI/180;	
 	float anglexrad = (float)(vidlongi+180)*CV_PI/180;	// some manipulations 
 	// to get to the correct place
 	
@@ -68,7 +68,10 @@ void update_map( int vidlongi, int vidlati, int vidw, float aspectratio, cv::Mat
 	
 	// for the mapping to centre / resized
 	int vidwpixels = round(((float)vidw/360.0) * map_x.cols);
-	int vidhpixels = round((float)vidwpixels / aspectratio);
+	int vidhpixels = round((float)vidwpixels * 2 / aspectratio);
+	// need to double the height, since for flat vids, the max fov = 90 deg.
+	//debug
+	//std::cout<<vidwpixels<<"x"<<vidhpixels<<std::endl;
 	int leftmargin = round((float)(map_x.cols - vidwpixels) / 2);
 	int rightmargin = leftmargin + vidwpixels;
 	int topmargin = round((float)(map_x.rows - vidhpixels) / 2);
@@ -106,10 +109,10 @@ void update_map( int vidlongi, int vidlati, int vidw, float aspectratio, cv::Mat
 			&& j < bottommargin 
 			&& j > topmargin )
 			{
-			 //~ resiz_x.at<float>(j,i) = (i-leftmargin)/resizeratiox; // x*resizeratio + leftmargin = i
+			 resiz_x.at<float>(j,i) = (i-leftmargin)/resizeratiox; // x*resizeratio + leftmargin = i
 			 //~ resiz_y.at<float>(j,i) = (j-topmargin)/resizeratioy  ;
 			 // if we want the image flipped up down / lr from the above.
-			 resiz_x.at<float>(j,i) = map_x.cols - (i-leftmargin)/resizeratiox;
+			 //resiz_x.at<float>(j,i) = map_x.cols - (i-leftmargin)/resizeratiox;
 			 resiz_y.at<float>(j,i) = map_x.rows - (j-topmargin)/resizeratioy;
 
 			}
@@ -118,25 +121,26 @@ void update_map( int vidlongi, int vidlati, int vidw, float aspectratio, cv::Mat
 			xfish = (i - xcd) / halfcols;
 			yfish = (j - ycd) / halfrows;
 			rfish = sqrt(xfish*xfish + yfish*yfish);
-			theta = atan2(yfish, xfish);
-			phi = rfish*aperture/2;
+			theta = atan2(yfish, xfish) + anglexrad;	// these transformations
+			phi = rfish*aperture/2 + angleyrad;		// are sufficient for our needs, 
+													// no need for rotation matrix.
 			
 			Px = sin(phi)*cos(theta);
 			Py = sin(phi)*sin(theta);
 			Pz = cos(phi);
 			
-			if(angleyrad!=0 || anglexrad!=0)
-			{
-				// cos(angleyrad), 0, sin(angleyrad), 0, 1, 0, -sin(angleyrad), 0, cos(angleyrad));
+			//~ if(angleyrad!=0 || anglexrad!=0)
+			//~ {
+				//~ // cos(angleyrad), 0, sin(angleyrad), 0, 1, 0, -sin(angleyrad), 0, cos(angleyrad));
 				
-				PxR = Px;
-				PyR = cos(angleyrad) * Py - sin(angleyrad) * Pz;
-				PzR = sin(angleyrad) * Py + cos(angleyrad) * Pz;
+				//~ PxR = Px;
+				//~ PyR = cos(angleyrad) * Py - sin(angleyrad) * Pz;
+				//~ PzR = sin(angleyrad) * Py + cos(angleyrad) * Pz;
 				
-				Px = cos(anglexrad) * PxR - sin(anglexrad) * PyR;
-				Py = sin(anglexrad) * PxR + cos(anglexrad) * PyR;
-				Pz = PzR;
-			}
+				//~ Px = cos(anglexrad) * PxR - sin(anglexrad) * PyR;
+				//~ Py = sin(anglexrad) * PxR + cos(anglexrad) * PyR;
+				//~ Pz = PzR;
+			//~ }
 			
 			
 			longi 	= atan2(Py, Px);
