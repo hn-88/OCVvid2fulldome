@@ -155,7 +155,7 @@ void update_map( int vidlongi, int vidlati, int vidw, float aspectratio, cv::Mat
 	{ 
 		for( int i = 0; i < map_x.cols; i++ )
 		{
-			if( (map_x.at<float>(j, i) == 0) && (map_y.at<float>(j, i) == 0) )
+			if( (map_x.at<float>(j, i) == 0) || (map_y.at<float>(j, i) == 0) )
 			
 			//~ xd = i - xcd;
 			//~ yd = j - ycd;
