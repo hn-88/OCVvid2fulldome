@@ -73,32 +73,33 @@ void update_map( int vidlongi, int vidlati, int vidw, float aspectratio, cv::Mat
 	// need to double the height, since for flat vids, the max fov = 90 deg.
 	
 	// as lat increases, vidwpixels decreases, so to compensate, decreasing vidhpixels
+	// hack to make it look symmetric, 1.85
 	if (vidlati < 10)
-	vidhpixels = round((float)vidwpixels * 2 / aspectratio);
+	vidhpixels = round((float)vidwpixels * 2 *1.85 * (90-5)/90/ aspectratio);
 	else
 	if (vidlati < 20)
-	vidhpixels = round((float)vidwpixels * 2 * (90-20)/90 / aspectratio);
+	vidhpixels = round((float)vidwpixels * 2 *1.85 * (90-15)/90 / aspectratio);
 	else
 	if (vidlati < 30)
-	vidhpixels = round((float)vidwpixels * 2 * (90-30)/90 / aspectratio);
+	vidhpixels = round((float)vidwpixels * 2 * 1.85 * (90-25)/90 / aspectratio);
 	else
 	if (vidlati < 40)
-	vidhpixels = round((float)vidwpixels * 2 * (90-40)/90 / aspectratio);
+	vidhpixels = round((float)vidwpixels * 2 * 1.85 * (90-35)/90 / aspectratio);
 	else
 	if (vidlati < 50)
-	vidhpixels = round((float)vidwpixels * 2 * (90-50)/90 / aspectratio);
+	vidhpixels = round((float)vidwpixels * 2 * 1.85 * (90-45)/90 / aspectratio);
 	else
 	if (vidlati < 60)
-	vidhpixels = round((float)vidwpixels * 2 * (90-60)/90 / aspectratio);
+	vidhpixels = round((float)vidwpixels * 2 * 1.85 * (90-55)/90 / aspectratio);
 	else
 	if (vidlati < 70)
-	vidhpixels = round((float)vidwpixels * 2 * (90-70)/90 / aspectratio);
+	vidhpixels = round((float)vidwpixels * 2 * 1.85 * (90-65)/90 / aspectratio);
 	else
 	if (vidlati < 80)
-	vidhpixels = round((float)vidwpixels * 2 * (90-80)/90 / aspectratio);
+	vidhpixels = round((float)vidwpixels * 2 * 1.85 * (90-75)/90 / aspectratio);
 	else
-	if (vidlati < 80)
-	vidhpixels = round((float)vidwpixels * 2 * (90-80)/90 / aspectratio);
+	if (vidlati < 89)
+	vidhpixels = round((float)vidwpixels * 2 * 1.85 * (90-85)/90 / aspectratio);
 	else
 	//vidhpixels = 0;
 	return;
@@ -472,6 +473,13 @@ int main(int argc,char *argv[])
 	
 	// https://stackoverflow.com/questions/5907031/printing-the-correct-number-of-decimal-points-with-cout
 	std::cout << std::fixed << std::setprecision(1);
+	
+	std::cout << "Output codec type: " << outputfourcc << std::endl;
+	
+	cv::namedWindow("Display", cv::WINDOW_NORMAL ); // 0 = WINDOW_NORMAL
+	cv::resizeWindow("Display", 600, 600); // this doesn't work?
+	cv::moveWindow("Display", 0, 0);
+	
 	
 	while(1)
 	{
