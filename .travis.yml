@@ -26,7 +26,7 @@ script:
   - export LD_LIBRARY_PATH=/lib:/usr/lib:/usr/local/lib
   ###########################################
   #- export VERSION=$(git rev-parse --short HEAD) # linuxdeployqt uses this for naming the file
-  - export VERSION="0.03"
+  - export VERSION="1.00"
   ###########################################
   - ./linuxdeployqt-continuous-x86_64.AppImage appdir/usr/share/applications/*.desktop -bundle-non-qt-libs
   - ./linuxdeployqt-continuous-x86_64.AppImage appdir/usr/share/applications/*.desktop -appimage
