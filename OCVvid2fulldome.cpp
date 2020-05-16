@@ -60,167 +60,85 @@ std::string escaped(const std::string& input)
 
 void update_map( int vidlongi, int vidlati, int vidw, float aspectratio, cv::Mat &map_x, cv::Mat &map_y )
 {
-	float angleyrad = (float)(vidlati)*CV_PI/180;	
-	float anglexrad = (float)(vidlongi+180)*CV_PI/180;	// some manipulations 
+	float angleyrad = (float)(90-vidlati)*CV_PI/180;	
+	float anglexrad = (float)(vidlongi+90)*CV_PI/180;	// some manipulations 
 	// to get to the correct place
+	float halfwidthrad = (float)vidw*CV_PI/360;
+	float halfheightrad = halfwidthrad/aspectratio;
+	float ypixperradian = (float)map_x.rows/CV_PI;
+	float halfheightpx = halfheightrad*ypixperradian;
+	float ycentrepx = angleyrad*ypixperradian;
 	
-	float mapoutside = (map_x.rows+map_x.cols)*10.0;
-	
-	// for the mapping to centre / resized
-	int vidwpixels = round(((float)vidw/360.0) * map_x.cols);
-	int vidhpixels;
-	//int vidhpixels = round((float)vidwpixels * 2 / aspectratio);
-	// need to double the height, since for flat vids, the max fov = 90 deg.
-	
-	// as lat increases, vidwpixels decreases, so to compensate, decreasing vidhpixels
-	// hack to make it look symmetric, 1.85
-	if (vidlati < 10)
-	vidhpixels = round((float)vidwpixels * 2 *1.85 * (90-5)/90/ aspectratio);
-	else
-	if (vidlati < 20)
-	vidhpixels = round((float)vidwpixels * 2 *1.85 * (90-15)/90 / aspectratio);
-	else
-	if (vidlati < 30)
-	vidhpixels = round((float)vidwpixels * 2 * 1.85 * (90-25)/90 / aspectratio);
-	else
-	if (vidlati < 40)
-	vidhpixels = round((float)vidwpixels * 2 * 1.85 * (90-35)/90 / aspectratio);
-	else
-	if (vidlati < 50)
-	vidhpixels = round((float)vidwpixels * 2 * 1.85 * (90-45)/90 / aspectratio);
-	else
-	if (vidlati < 60)
-	vidhpixels = round((float)vidwpixels * 2 * 1.85 * (90-55)/90 / aspectratio);
-	else
-	if (vidlati < 70)
-	vidhpixels = round((float)vidwpixels * 2 * 1.85 * (90-65)/90 / aspectratio);
-	else
-	if (vidlati < 80)
-	vidhpixels = round((float)vidwpixels * 2 * 1.85 * (90-75)/90 / aspectratio);
-	else
-	if (vidlati < 89)
-	vidhpixels = round((float)vidwpixels * 2 * 1.85 * (90-85)/90 / aspectratio);
-	else
-	//vidhpixels = 0;
-	return;
-	
-	//debug
-	//std::cout<<vidwpixels<<"x"<<vidhpixels<<std::endl;
-	int leftmargin = round((float)(map_x.cols - vidwpixels) / 2);
-	int rightmargin = leftmargin + vidwpixels;
-	int topmargin = round((float)(map_x.rows - vidhpixels) / 2);
-	int bottommargin = topmargin + vidhpixels;
-	// OpenCV (0,0) is top left. 
-	float resizeratiox = (float)vidwpixels / (float) map_x.cols;
-	float resizeratioy = (float)vidhpixels / (float) map_x.rows;
-	
-	// create intermediate maps
-	cv::Mat resiz_x, resiz_y, mapf_x, mapf_y;
-	map_x.copyTo(resiz_x);
-	map_x.copyTo(resiz_y);
-	map_x.copyTo(mapf_x);
-	map_x.copyTo(mapf_y);
-		
-	// for the mapping from equi to fisheye
-	int xcd = floor(map_x.cols/2) - 1 ;
-	int ycd = floor(map_x.rows/2) - 1 ;
 	float halfcols = map_x.cols/2;
 	float halfrows = map_x.rows/2;
+	float Rmin = ycentrepx-halfheightpx;
+	float Rmax = ycentrepx+halfheightpx;
+	float thetamin = anglexrad - halfwidthrad;
+	float thetamax = anglexrad + halfwidthrad;
+	
+	float mapoutside = (map_x.rows+map_x.cols)*10.0;
+	float R, theta;
+	float xfish, yfish;
+	int xcd = floor(map_x.cols/2) - 1 ;
+	int ycd = floor(map_x.rows/2) - 1 ;
+	int quadrant;
+	
+	// find the range of theta with respect to [0,2*pi]
+	// and handle the cases where thetamax-thetamin crosses quadrants.
+	if (thetamin>2*CV_PI)
+	{
+		double intpart;
+		modf(thetamin/(2*CV_PI), &intpart);
+		//thetamin = fmod(thetamin, 2*CV_PI);
+		thetamin = thetamin - intpart*2*CV_PI;
+		thetamax = thetamax - intpart*2*CV_PI;
+	}
+	
+	//~ if (thetamin>0 && thetamin<CV_PI && thetamax<CV_PI)
+	//~ quadrant=12;
+	//~ else
+	//~ if (thetamin>0 && thetamin<CV_PI/2 && thetamax<1.5*CV_PI)
+	//~ quadrant=13;
+	//~ else
+	//~ if (thetamin>CV_PI/2 && thetamin<1.5*CV_PI && thetamax<1.5*CV_PI)
+	//~ quadrant=23;
+	
+	if (thetamax > 2*CV_PI)
+		quadrant = 41;
 	
 	
-	float longi, lat, Px, Py, Pz, theta;						// X and Y are map_x and map_y
-	float xfish, yfish, rfish, phi, xequi, yequi;
-	float PxR, PyR, PzR;
-	float aperture = CV_PI;
+	// debug
+	//~ std::cout << "Rmin="<<Rmin<<" Rmax="<<Rmax<<std::endl;
+	//~ std::cout << "thetamin="<<thetamin<<" thetamax="<<thetamax<<std::endl;
 	
-					
+	// xsrc in range [0 map_x.cols-1] maps to theta in [anglexrad-vidw/2, anglexrad+vidw/2]
+	// ysrc in range [0 map_x.rows-1] maps to R in [Rcentre-halfheight, Rcentre+halfheight]
+						
 	for(int j = 0; j < map_x.rows; j++ )	// j is for y, i is for x
 	{ 
 		for( int i = 0; i < map_x.cols; i++ )
 		{
-			if( i < rightmargin 
-			&& i > leftmargin 
-			&& j < bottommargin 
-			&& j > topmargin )
+			xfish = (float)(i - xcd);
+			yfish = (float)(j - ycd);
+			R = sqrt(xfish*xfish + yfish*yfish);
+			 
+			theta = -atan2(yfish, xfish);	// minus else l-r inverted.
+			// map theta from [-pi,pi] to [0,2pi]
+			if(theta<0)
+				theta=theta+2*CV_PI;
+			
+			// handle this special case
+			if (quadrant==41 && theta<CV_PI && theta>=0)
+				theta=theta+2*CV_PI;
+			
+			if((R>Rmin) && (R<Rmax) && (theta>thetamin) && (theta<thetamax))
 			{
-			 resiz_x.at<float>(j,i) = (i-leftmargin)/resizeratiox; // x*resizeratio + leftmargin = i
-			 //~ resiz_y.at<float>(j,i) = (j-topmargin)/resizeratioy  ;
-			 // if we want the image flipped up down / lr from the above.
-			 //resiz_x.at<float>(j,i) = map_x.cols - (i-leftmargin)/resizeratiox;
-			 resiz_y.at<float>(j,i) = map_x.rows - (j-topmargin)/resizeratioy;
-
-			}
-			
-			// resiz_x to map_x mapping as in OCVWarp transformtype=1.
-			xfish = (i - xcd) / halfcols;
-			yfish = (j - ycd) / halfrows;
-			rfish = sqrt(xfish*xfish + yfish*yfish);
-			theta = atan2(yfish, xfish) + anglexrad;	// these transformations
-			phi = rfish*aperture/2 + angleyrad;		// are sufficient for our needs, 
-													// no need for rotation matrix.
-			
-			Px = sin(phi)*cos(theta);
-			Py = sin(phi)*sin(theta);
-			Pz = cos(phi);
-			
-			//~ if(angleyrad!=0 || anglexrad!=0)
-			//~ {
-				//~ // cos(angleyrad), 0, sin(angleyrad), 0, 1, 0, -sin(angleyrad), 0, cos(angleyrad));
-				
-				//~ PxR = Px;
-				//~ PyR = cos(angleyrad) * Py - sin(angleyrad) * Pz;
-				//~ PzR = sin(angleyrad) * Py + cos(angleyrad) * Pz;
-				
-				//~ Px = cos(anglexrad) * PxR - sin(anglexrad) * PyR;
-				//~ Py = sin(anglexrad) * PxR + cos(anglexrad) * PyR;
-				//~ Pz = PzR;
-			//~ }
-			
-			
-			longi 	= atan2(Py, Px);
-			lat	 	= atan2(Pz,sqrt(Px*Px + Py*Py));	
-			
-			xequi = longi / CV_PI;
-			// this maps to [-1, 1]
-			yequi = 2*lat / CV_PI;
-			// this maps to [-1, 0] for south pole
-			
-			mapf_x.at<float>(i, j) =  abs(xequi * map_x.cols / 2 + xcd);
-			mapf_y.at<float>(i, j) =  yequi * map_x.rows / 2 + ycd;
-			
-	
-			//~ phiang = rad_per_px * rd + angleyrad; // this zooms in/out, not rotate cam
-			
-			//~ if ( (rd <= xcd) && (phiang > 0) )
-			//~ {
-				//~ mapf_x.at<float>(j, i) = (float)(map_x.cols/2) + theta * px_per_theta;
-				//~ mapf_y.at<float>(j, i) = phiang * px_per_phi;
-			//~ }
-				
-		} // end for i
-	} // end for j
-	
-	cv::remap(resiz_x, map_x, mapf_x, mapf_y, cv::INTER_LINEAR );
-	cv::remap(resiz_y, map_y, mapf_x, mapf_y, cv::INTER_LINEAR );
-	// here, the remap function maps undefined points of map_x, map_y to (0,0)
-	// this is manually corrected below.
-	for(int j = 0; j < map_x.rows; j++ )	// j is for y, i is for x
-	{ 
-		for( int i = 0; i < map_x.cols; i++ )
-		{
-			if( (map_x.at<float>(j, i) == 0) || (map_y.at<float>(j, i) == 0) )
-			
-			//~ xd = i - xcd;
-			//~ yd = j - ycd;
-			//~ rd = sqrt(float(xd*xd + yd*yd));
-			//~ if(rd > xcd)
-			{
-				map_x.at<float>(j, i) = mapoutside;
-				map_y.at<float>(j, i) = mapoutside;
+				map_y.at<float>(j,i) = (float)(map_x.rows-1) * (R-Rmin) / (Rmax-Rmin);
+				map_x.at<float>(j,i) = (float)(map_x.cols-1) * (theta-thetamin) / (thetamax-thetamin);				
 			}
 		}
 	}
-		
+			
 }
 
 
