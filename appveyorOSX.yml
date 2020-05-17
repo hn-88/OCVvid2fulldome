@@ -1,0 +1,21 @@
+version: 1.00.{build}
+# base image
+image: macos
+
+#platform: Win32
+configuration: Release       
+
+install: 
+ - brew update ;
+ - brew install opencv cmake;
+  
+  
+build:
+ - cd build
+ - cmake ..
+ - make
+
+ 
+artifacts:
+- path: build/OCVvid2fulldome
+  
