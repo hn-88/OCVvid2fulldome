@@ -10,7 +10,7 @@ install:
  - brew install opencv cmake;
   
   
-build:
+build_script:
  - cd build
  - cmake ..
  - make
