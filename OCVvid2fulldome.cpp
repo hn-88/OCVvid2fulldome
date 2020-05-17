@@ -392,7 +392,7 @@ int main(int argc,char *argv[])
 	// https://stackoverflow.com/questions/5907031/printing-the-correct-number-of-decimal-points-with-cout
 	std::cout << std::fixed << std::setprecision(1);
 	
-	std::cout << "Output codec type: " << outputfourcc << std::endl;
+	std::cout << std::endl << "Output codec type: " << outputfourcc << std::endl;
 	
 	cv::namedWindow("Display", cv::WINDOW_NORMAL ); // 0 = WINDOW_NORMAL
 	cv::resizeWindow("Display", 600, 600); // this doesn't work?
