@@ -378,7 +378,7 @@ int main(int argc,char *argv[])
 		update_map(vidlongi[i], vidlati[i], vidw[i], aspectratio[i], map_x[i], map_y[i]);
 		cv::convertMaps(map_x[i], map_y[i], dst_x[i], dst_y[i], CV_16SC2);	
 		// supposed to make it faster to remap
-		std::cout<<"\r"<<"Vid"<<i<<" x:"<<vidlongi[i]<<" y:"<<vidlati[i]<<std::flush;;
+		std::cout<<"\r"<<"Process vid"<<i<<" x:"<<vidlongi[i]<<" y:"<<vidlati[i]<<std::flush;;
 	}
 	
 	t_start = time(NULL);
@@ -572,7 +572,7 @@ int main(int argc,char *argv[])
 				update_map(vidlongi[i], vidlati[i], vidw[i], aspectratio[i], map_x[i], map_y[i]);
 				cv::convertMaps(map_x[i], map_y[i], dst_x[i], dst_y[i], CV_16SC2);	
 				// supposed to make it faster to remap
-				std::cout<<"\r"<<"Vid"<<i<<" x:"<<vidlongi[i]<<" y:"<<vidlati[i]<<std::flush;;
+				std::cout<<"\r"<<"Process vid"<<i<<" x:"<<vidlongi[i]<<" y:"<<vidlati[i]<<std::flush;;
 				
 			}
 			interactivemode = 0;
