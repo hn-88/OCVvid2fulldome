@@ -1,6 +1,10 @@
 version: 1.00.{build}
 # base image
 image: macos
+# As of now, the yml below **DOES NOT WORK**
+#############################################
+# Problems with appveyor cmake, conflict with gcc etc?
+######################################################
 
 #platform: Win32
 configuration: Release       
