@@ -58,87 +58,88 @@ std::string escaped(const std::string& input)
     return output;
 }
 
-void update_map( int vidlongi, int vidlati, int vidw, float aspectratio, cv::Mat &map_x, cv::Mat &map_y )
+void makesmall_map( int vidw, float aspectratio, cv::Mat &maps_x, cv::Mat &maps_y )
 {
-	float angleyrad = (float)(90-vidlati)*CV_PI/180;	
-	float anglexrad = (float)(vidlongi+90)*CV_PI/180;	// some manipulations 
-	// to get to the correct place
-	float halfwidthrad = (float)vidw*CV_PI/360;
-	float halfheightrad = halfwidthrad/aspectratio;
-	float ypixperradian = (float)map_x.rows/CV_PI;
-	float halfheightpx = halfheightrad*ypixperradian;
-	float ycentrepx = angleyrad*ypixperradian;
+	int wpix = ((float)vidw/360.0 ) *  maps_x.cols;
+	int hpix = round((float)wpix/aspectratio);
+	int leftmargin = (maps_x.cols - wpix) / 2;
+	int topmargin = (maps_x.rows - hpix) / 2;
+	int botmargin = topmargin+hpix;
+	int rightmargin = leftmargin+wpix;
 	
-	float halfcols = map_x.cols/2;
-	float halfrows = map_x.rows/2;
-	float Rmin = ycentrepx-halfheightpx;
-	float Rmax = ycentrepx+halfheightpx;
-	float thetamin = anglexrad - halfwidthrad;
-	float thetamax = anglexrad + halfwidthrad;
+	// maps_x in [leftmargin, leftmargin+wpix] maps to [0,maps_x.cols-1] in src
 	
-	float mapoutside = (map_x.rows+map_x.cols)*10.0;
-	float R, theta;
-	float xfish, yfish;
-	int xcd = floor(map_x.cols/2) - 1 ;
-	int ycd = floor(map_x.rows/2) - 1 ;
-	int quadrant;
-	
-	// find the range of theta with respect to [0,2*pi]
-	// and handle the cases where thetamax-thetamin crosses quadrants.
-	if (thetamin>2*CV_PI)
-	{
-		double intpart;
-		modf(thetamin/(2*CV_PI), &intpart);
-		//thetamin = fmod(thetamin, 2*CV_PI);
-		thetamin = thetamin - intpart*2*CV_PI;
-		thetamax = thetamax - intpart*2*CV_PI;
-	}
-	
-	//~ if (thetamin>0 && thetamin<CV_PI && thetamax<CV_PI)
-	//~ quadrant=12;
-	//~ else
-	//~ if (thetamin>0 && thetamin<CV_PI/2 && thetamax<1.5*CV_PI)
-	//~ quadrant=13;
-	//~ else
-	//~ if (thetamin>CV_PI/2 && thetamin<1.5*CV_PI && thetamax<1.5*CV_PI)
-	//~ quadrant=23;
-	
-	if (thetamax > 2*CV_PI)
-		quadrant = 41;
-	
-	
-	// debug
-	//~ std::cout << "Rmin="<<Rmin<<" Rmax="<<Rmax<<std::endl;
-	//~ std::cout << "thetamin="<<thetamin<<" thetamax="<<thetamax<<std::endl;
-	
-	// xsrc in range [0 map_x.cols-1] maps to theta in [anglexrad-vidw/2, anglexrad+vidw/2]
-	// ysrc in range [0 map_x.rows-1] maps to R in [Rcentre-halfheight, Rcentre+halfheight]
-						
-	for(int j = 0; j < map_x.rows; j++ )	// j is for y, i is for x
+	for(int j = topmargin; j < botmargin; j++ )	// j is for y, i is for x
 	{ 
-		for( int i = 0; i < map_x.cols; i++ )
+		for( int i = leftmargin; i < rightmargin; i++ )
 		{
-			xfish = (float)(i - xcd);
-			yfish = (float)(j - ycd);
-			R = sqrt(xfish*xfish + yfish*yfish);
-			 
-			theta = -atan2(yfish, xfish);	// minus else l-r inverted.
-			// map theta from [-pi,pi] to [0,2pi]
-			if(theta<0)
-				theta=theta+2*CV_PI;
-			
-			// handle this special case
-			if (quadrant==41 && theta<CV_PI && theta>=0)
-				theta=theta+2*CV_PI;
-			
-			if((R>Rmin) && (R<Rmax) && (theta>thetamin) && (theta<thetamax))
-			{
-				map_y.at<float>(j,i) = (float)(map_x.rows-1) * (R-Rmin) / (Rmax-Rmin);
-				map_x.at<float>(j,i) = (float)(map_x.cols-1) * (theta-thetamin) / (thetamax-thetamin);				
-			}
+			maps_y.at<float>(j,i) = (float)(maps_x.rows-1) * (j-topmargin)  / (hpix);
+			maps_x.at<float>(j,i) = (float)(maps_x.cols-1) * (i-leftmargin) / (wpix);			
 		}
 	}
-			
+	
+	
+}
+
+void update_map( int vidlongi, int vidlati, int vidw, float aspectratio, cv::Mat &map_x, cv::Mat &map_y )
+{
+		// direct copy-paste of OCVWarp code, transformtype=1
+		int xcd = floor(map_x.cols/2) - 1 ;
+		int ycd = floor(map_x.rows/2) - 1 ;
+		float halfcols = map_x.cols/2;
+		float halfrows = map_x.rows/2;
+		
+		
+		float longi, lat, Px, Py, Pz, theta;						// X and Y are map_x and map_y
+		float xfish, yfish, rfish, phi, xequi, yequi;
+		float PxR, PyR, PzR;
+		float aperture = CV_PI;
+		float angleyrad = -vidlati*CV_PI/180;
+		float anglexrad = -90.0*CV_PI/180;
+		
+		for ( int i = 0; i < map_x.rows; i++ ) // here, i is for y and j is for x
+			{
+				for ( int j = 0; j < map_x.cols; j++ )
+				{
+					// normalizing to [-1, 1]
+					xfish = (j - xcd) / halfcols;
+					yfish = (i - ycd) / halfrows;
+					rfish = sqrt(xfish*xfish + yfish*yfish);
+					theta = atan2(yfish, xfish);
+					phi = rfish*aperture/2;
+					
+					// standard co-ords - this is suitable when phi=pi/2 is Pz=0
+					Px = sin(phi)*cos(theta);
+					Py = sin(phi)*sin(theta);
+					Pz = cos(phi);
+					
+					
+					PxR = Px;
+					PyR = cos(angleyrad) * Py - sin(angleyrad) * Pz;
+					PzR = sin(angleyrad) * Py + cos(angleyrad) * Pz;
+					
+					Px = cos(anglexrad) * PxR - sin(anglexrad) * PyR;
+					Py = sin(anglexrad) * PxR + cos(anglexrad) * PyR;
+					Pz = PzR;
+					
+					longi 	= atan2(Py, Px);
+					lat	 	= atan2(Pz,sqrt(Px*Px + Py*Py));	
+					// this gives south pole centred, ie yequi goes from [-1, 0]
+					// Made into north pole centred by - (minus) in the final map_y assignment
+					
+					xequi = longi / CV_PI;
+					// this maps to [-1, 1]
+					yequi = 2*lat / CV_PI;
+					// this maps to [-1, 0] for south pole
+					
+					map_x.at<float>(i, j) =  abs(xequi * map_x.cols / 2 + xcd);
+					map_y.at<float>(i, j) =  yequi * map_x.rows / 2 + ycd;
+					
+					
+				 } // for j
+				   
+			} // for i
+				
 }
 
 
@@ -172,9 +173,14 @@ int main(int argc,char *argv[])
     cv::Size Sout;
     
     std::vector<cv::Mat> spl;
-    cv::Mat dst2;	// temp dst, for eachvid
+    cv::Mat dst2, dst3, dsts;	// temp dst, for eachvid
+    cv::Mat rot_mat;
+    cv::Point2f image_centre;
+    double angle;
+    
     cv::Mat map_x[100], map_y[100];
     cv::Mat dst_x[100], dst_y[100];
+    cv::Mat dsts_x[100], dsts_y[100];
     
     if(argc > 1)
     {
@@ -375,6 +381,9 @@ int main(int argc,char *argv[])
 		map_y[i] = cv::Scalar((outputw+outputw)*10);
 		// initializing so that it points outside the image
 		// so that unavailable pixels will be black
+		makesmall_map(vidw[i], aspectratio[i], map_x[i], map_y[i]);
+		cv::convertMaps(map_x[i], map_y[i], dsts_x[i], dsts_y[i], CV_16SC2);	
+		
 		update_map(vidlongi[i], vidlati[i], vidw[i], aspectratio[i], map_x[i], map_y[i]);
 		cv::convertMaps(map_x[i], map_y[i], dst_x[i], dst_y[i], CV_16SC2);	
 		// supposed to make it faster to remap
@@ -398,6 +407,8 @@ int main(int argc,char *argv[])
 	cv::resizeWindow("Display", 600, 600); // this doesn't work?
 	cv::moveWindow("Display", 0, 0);
 	
+	image_centre = cv::Point2f(outputw/2,outputw/2);
+	
 	
 	while(1)
 	{
@@ -416,8 +427,17 @@ int main(int argc,char *argv[])
 			//	inputEnded[i]=0;	
 			//imshow("Display",src);
 			cv::resize(src, res, Sout, 0, 0, cv::INTER_LINEAR);
-			cv::remap(res, dst2, dst_x[i], dst_y[i], cv::INTER_LINEAR, cv::BORDER_CONSTANT, cv::Scalar(0, 0, 0) );
-			dst = dst + dst2;
+			// first remap to small size
+			cv::remap(res, dsts, dsts_x[i], dsts_y[i], cv::INTER_LINEAR, cv::BORDER_CONSTANT, cv::Scalar(0, 0, 0) );
+			// remap using OCVWarp code
+			cv::remap(dsts, dst2, dst_x[i], dst_y[i], cv::INTER_LINEAR, cv::BORDER_CONSTANT, cv::Scalar(0, 0, 0) );
+			// and rotate to desired longitude
+			// https://stackoverflow.com/questions/9041681/opencv-python-rotate-image-by-x-degrees-around-specific-point
+			angle = (vidlongi[i] - 180) * CV_PI / 180;
+			rot_mat=cv::getRotationMatrix2D(image_centre, angle, 1.0);
+			cv::warpAffine(dst2, dst3, rot_mat, dst2.size());
+  
+			dst = dst + dst3;
 			}
 			
 		}
