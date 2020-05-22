@@ -73,7 +73,7 @@ void makesmall_map( int vidw, float aspectratio, cv::Mat &maps_x, cv::Mat &maps_
 	{ 
 		for( int i = leftmargin; i < rightmargin; i++ )
 		{
-			maps_y.at<float>(j,i) = (float)(maps_x.rows-1) * (j-topmargin)  / (hpix);
+			maps_y.at<float>(j,i) = (float)(maps_x.rows-1) * (botmargin-j)  / (hpix);
 			maps_x.at<float>(j,i) = (float)(maps_x.cols-1) * (i-leftmargin) / (wpix);			
 		}
 	}
