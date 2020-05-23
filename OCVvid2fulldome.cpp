@@ -61,7 +61,9 @@ std::string escaped(const std::string& input)
 void makesmall_map( int vidw, float aspectratio, cv::Mat &maps_x, cv::Mat &maps_y )
 {
 	int wpix = ((float)vidw/360.0 ) *  maps_x.cols;
-	int hpix = round((float)wpix/aspectratio);
+	int hpix = round((float)wpix/aspectratio)*2;	// the 2* is due to converting
+											// equirect 2:1 image into a square outpu
+	 
 	int leftmargin = (maps_x.cols - wpix) / 2;
 	int topmargin = (maps_x.rows - hpix) / 2;
 	int botmargin = topmargin+hpix;
@@ -74,7 +76,7 @@ void makesmall_map( int vidw, float aspectratio, cv::Mat &maps_x, cv::Mat &maps_
 		for( int i = leftmargin; i < rightmargin; i++ )
 		{
 			maps_y.at<float>(j,i) = (float)(maps_x.rows-1) * (botmargin-j)  / (hpix);
-			maps_x.at<float>(j,i) = (float)(maps_x.cols-1) * (i-leftmargin) / (wpix);			
+			maps_x.at<float>(j,i) = maps_x.cols - (float)(maps_x.cols-1) * (i-leftmargin) / (wpix);			
 		}
 	}
 	
@@ -433,7 +435,7 @@ int main(int argc,char *argv[])
 			cv::remap(dsts, dst2, dst_x[i], dst_y[i], cv::INTER_LINEAR, cv::BORDER_CONSTANT, cv::Scalar(0, 0, 0) );
 			// and rotate to desired longitude
 			// https://stackoverflow.com/questions/9041681/opencv-python-rotate-image-by-x-degrees-around-specific-point
-			angle = (vidlongi[i] - 180) * CV_PI / 180;
+			angle = (vidlongi[i] - 180) ; // this parameter is in degrees.
 			rot_mat=cv::getRotationMatrix2D(image_centre, angle, 1.0);
 			cv::warpAffine(dst2, dst3, rot_mat, dst2.size());
   
