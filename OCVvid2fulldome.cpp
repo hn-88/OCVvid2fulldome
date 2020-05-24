@@ -98,6 +98,13 @@ void update_map( int vidlongi, int vidlati, int vidw, float aspectratio, cv::Mat
 		float aperture = CV_PI;
 		float angleyrad = -vidlati*CV_PI/180;
 		float anglexrad = -90.0*CV_PI/180;
+		double angle = (vidlongi - 180) ; // this parameter is in degrees.
+		cv::Mat rot_mat;
+		cv::Point2f image_centre(map_x.cols/2,map_x.rows/2);
+		
+		cv::Mat mapb_x, mapb_y;
+		map_x.copyTo(mapb_x);
+		map_y.copyTo(mapb_y);
 		
 		for ( int i = 0; i < map_x.rows; i++ ) // here, i is for y and j is for x
 			{
@@ -134,13 +141,19 @@ void update_map( int vidlongi, int vidlati, int vidw, float aspectratio, cv::Mat
 					yequi = 2*lat / CV_PI;
 					// this maps to [-1, 0] for south pole
 					
-					map_x.at<float>(i, j) =  abs(xequi * map_x.cols / 2 + xcd);
-					map_y.at<float>(i, j) =  yequi * map_x.rows / 2 + ycd;
+					mapb_x.at<float>(i, j) =  abs(xequi * map_x.cols / 2 + xcd);
+					mapb_y.at<float>(i, j) =  yequi * map_x.rows / 2 + ycd;
 					
 					
 				 } // for j
 				   
 			} // for i
+			
+			// now rotate the map
+			rot_mat=cv::getRotationMatrix2D(image_centre, angle, 1.0);
+			cv::warpAffine(mapb_x, map_x, rot_mat, mapb_x.size());
+			cv::warpAffine(mapb_y, map_y, rot_mat, mapb_x.size());
+  
 				
 }
 
@@ -176,9 +189,6 @@ int main(int argc,char *argv[])
     
     std::vector<cv::Mat> spl;
     cv::Mat dst2, dst3, dsts;	// temp dst, for eachvid
-    cv::Mat rot_mat;
-    cv::Point2f image_centre;
-    double angle;
     
     cv::Mat map_x[100], map_y[100];
     cv::Mat dst_x[100], dst_y[100];
@@ -408,10 +418,7 @@ int main(int argc,char *argv[])
 	cv::namedWindow("Display", cv::WINDOW_NORMAL ); // 0 = WINDOW_NORMAL
 	cv::resizeWindow("Display", 600, 600); // this doesn't work?
 	cv::moveWindow("Display", 0, 0);
-	
-	image_centre = cv::Point2f(outputw/2,outputw/2);
-	
-	
+		
 	while(1)
 	{
 		dst = cv::Mat::zeros(Sout, CV_8UC3);
@@ -435,11 +442,8 @@ int main(int argc,char *argv[])
 			cv::remap(dsts, dst2, dst_x[i], dst_y[i], cv::INTER_LINEAR, cv::BORDER_CONSTANT, cv::Scalar(0, 0, 0) );
 			// and rotate to desired longitude
 			// https://stackoverflow.com/questions/9041681/opencv-python-rotate-image-by-x-degrees-around-specific-point
-			angle = (vidlongi[i] - 180) ; // this parameter is in degrees.
-			rot_mat=cv::getRotationMatrix2D(image_centre, angle, 1.0);
-			cv::warpAffine(dst2, dst3, rot_mat, dst2.size());
-  
-			dst = dst + dst3;
+			
+			dst = dst + dst2;
 			}
 			
 		}
