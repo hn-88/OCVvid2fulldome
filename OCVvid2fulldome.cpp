@@ -182,7 +182,7 @@ int main(int argc,char *argv[])
 	int  fps, key;
 	int t_start, t_end;
     unsigned long long framenum = 0;
-    std::string tempstring;
+    std::string tempstring, inistr;
     char const * lTmp;
     char * ptr;
      
@@ -197,10 +197,40 @@ int main(int argc,char *argv[])
     cv::Mat dst_x[100], dst_y[100];
     cv::Mat dsts_x[100], dsts_y[100];
     
+    if(argc <= 1)
+    {
+		char const * FilterPatternsini[2] =  { "*.ini","*.*" };
+		char const * OpenFileNameini;
+		
+		OpenFileNameini = tinyfd_openFileDialog(
+				"Open an ini file if it exists",
+				"",
+				2,
+				FilterPatternsini,
+				NULL,
+				0);
+
+		if (! OpenFileNameini)
+		{
+			skipinputs = 0;
+		}
+		else
+		{
+			skipinputs = 1;
+			inistr = OpenFileNameini;
+		}
+	}
+	    
     if(argc > 1)
     {
 		// argument can be ini file path
-		std::ifstream infile(argv[1]);
+		skipinputs = 1;
+		inistr = argv[1];
+	}
+	
+	if(skipinputs)
+    {
+		std::ifstream infile(inistr);
 		if (infile.is_open())
 		  {
 			  try
