@@ -163,7 +163,8 @@ int main(int argc,char *argv[])
 	bool doneflag = 0;
 	bool showdisplay = 1, interactivemode=0;
 	bool skipinputs = 0;
-	int outputw, outputfps;
+	int outputw;
+	double outputfps;
 	char outputfourcc[5] = {'X','V','I','D', '\0'};
 	std::string fourccstr;
 	int numvids;
@@ -182,6 +183,8 @@ int main(int argc,char *argv[])
 	int t_start, t_end;
     unsigned long long framenum = 0;
     std::string tempstring;
+    char const * lTmp;
+    char * ptr;
      
     cv::Mat src, dst, res;
     cv::Mat dstfloat, dstmult, dstres, dstflip;
@@ -251,17 +254,36 @@ int main(int argc,char *argv[])
 	
 	if(!skipinputs)
 	{
-	// better to use getline
+	// better to use getline than cin
 	// https://stackoverflow.com/questions/4999650/c-how-do-i-check-if-the-cin-buffer-is-empty
-	std::cout << "ini file not supplied or unreadable. So, manual inputs ..." << std::endl;
-	std::cout << "Enter Output video width (=height): ";
-	std::cin >> outputw;
-	std::cout << "Enter Output video framerate (fps): ";
-	std::cin >> outputfps;
-	std::cout << "Enter Output video fourcc (default is XVID): ";
-	// a dummy getline is needed
-	std::getline(std::cin, tempstring);
-	std::getline(std::cin, fourccstr);
+	tinyfd_messageBox("Please Note", "ini file not supplied or unreadable. So, manual inputs ...", "ok", "info", 1);
+	//std::cout << "Enter Output video width (=height): ";
+	
+	lTmp = tinyfd_inputBox(
+		"Please Input", "Output video width (=height)", "1024");
+	if (!lTmp) return 1 ;
+	
+	outputw = atoi(lTmp);
+	//std::cin >> outputw;
+	
+	//~ std::cout << "Enter Output video framerate (fps): ";
+	//~ std::cin >> outputfps;
+	lTmp = tinyfd_inputBox(
+		"Please Input", "Desired output video framerate (fps)", "30");
+	if (!lTmp) return 1 ;
+	outputfps = strtod(lTmp, &ptr);
+	if (outputfps == 0.0) return 1 ;
+	
+	//~ std::cout << "Enter Output video fourcc (default is XVID): ";
+	//~ // a dummy getline is needed
+	//~ std::getline(std::cin, tempstring);
+	//~ std::getline(std::cin, fourccstr);
+	
+	lTmp = tinyfd_inputBox(
+		"Please Input", "Output video fourcc", "XVID");
+	if (!lTmp) return 1 ;
+	fourccstr = lTmp;
+	
 	if(fourccstr.empty())
 	{
 		// use the default
@@ -273,9 +295,23 @@ int main(int argc,char *argv[])
 		outputfourcc[2]=fourccstr.at(2);
 		outputfourcc[3]=fourccstr.at(3);
 	}
-	std::cout << "Enter number of videos (max=99): ";
-	std::cin >> numvids;
-	
+	//~ std::cout << "Enter number of videos (max=99): ";
+	//~ std::cin >> numvids;
+	lTmp = tinyfd_inputBox(
+		"Please Input", "Number of input videos (max=99)", "2");
+	if (!lTmp) return 1 ;
+	numvids = atoi(lTmp);
+	if (numvids>99 || numvids<1)
+	{
+			tinyfd_messageBox(
+			"Error",
+			"Number of videos must be between 1 and 99. ",
+			"ok",
+			"error",
+			1);
+		return 1 ;
+	}
+		
 	char const * FilterPatterns[2] =  { "*.avi","*.*" };
 	char const * OpenFileName;
 	
@@ -301,18 +337,38 @@ int main(int argc,char *argv[])
 		}
 		
 		VidFileName[looptemp] = escaped(std::string(OpenFileName));
-		std::cout << "Enter desired position for this video as degrees longitude, back = 0: ";
-		std::cin >> vidlongi[looptemp];
-		std::cout << "Enter desired height for this video as degrees latitude, horizon = 0: ";
-		std::cin >> vidlati[looptemp];
-		std::cout << "Enter desired width for this video in degrees: ";
-		std::cin >> vidw[looptemp];
+		//~ std::cout << "Enter desired position for this video as degrees longitude, back = 0: ";
+		//~ std::cin >> vidlongi[looptemp];
+		lTmp = tinyfd_inputBox(
+		"Please Input", 
+		"Desired position for this video as \n degrees longitude, back = 0", 
+		"180");
+		if (!lTmp) return 1 ;
+		vidlongi[looptemp] = atoi(lTmp);
+	
+		//~ std::cout << "Enter desired height for this video as degrees latitude, horizon = 0: ";
+		//~ std::cin >> vidlati[looptemp];
+		lTmp = tinyfd_inputBox(
+		"Please Input", 
+		"Desired height for this video as \n degrees latitude, horizon = 0", 
+		"20");
+		if (!lTmp) return 1 ;
+		vidlati[looptemp] = atoi(lTmp);
+		
+		//~ std::cout << "Enter desired width for this video in degrees: ";
+		//~ std::cin >> vidw[looptemp];
+		lTmp = tinyfd_inputBox(
+		"Please Input", 
+		"Desired width for this video in degrees", 
+		"20");
+		if (!lTmp) return 1 ;
+		vidw[looptemp] = atoi(lTmp);
 		
 		looptemp++;
 	}
 	
 	std::string OpenFileNamestr = VidFileName[0];
-	std::string::size_type pAt = OpenFileNamestr.find_last_of('.');                  // Find extension point
+	std::string::size_type pAt = OpenFileNamestr.find_last_of('.');		// Find extension point
     NAME = OpenFileNamestr.substr(0, pAt) + "F" + ".avi";   // Form the new name with container
     
 	char const * SaveFileName = tinyfd_saveFileDialog(
