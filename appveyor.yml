@@ -1,9 +1,9 @@
-# Win32 build which can work on Win7 upwards.
+# Win64 build.
 version: 1.60.{build}
 # base image
 image: Visual Studio 2019
 
-platform: Win32
+platform: x64
 configuration: Release       
 
 install:
