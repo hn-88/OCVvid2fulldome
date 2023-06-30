@@ -24,6 +24,6 @@ build:
   verbosity: minimal
  
 artifacts:
-- path: Release\OCVvid2fulldomex64.exe
+- path: x64\Release\OCVvid2fulldomex64.exe
   
     
