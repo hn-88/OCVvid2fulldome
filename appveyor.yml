@@ -1,9 +1,9 @@
-# Win32 build which can work on Win7 upwards.
+# x64 build since the github opencv dll is only x64
 version: 1.60.{build}
-# base image
+# base images
 image: Visual Studio 2015
 
-platform: Win32
+platform: x64
 configuration: Release       
 
 install:
