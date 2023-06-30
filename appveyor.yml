@@ -19,11 +19,11 @@ install:
   
   
 build:
-  project: OCVvid2fulldomeWin32.vcxproj
+  project: OCVvid2fulldomex64.vcxproj
 
   verbosity: minimal
  
 artifacts:
-- path: Release\OCVvid2fulldomeWin32.exe
+- path: Release\OCVvid2fulldomex64.exe
   
     
