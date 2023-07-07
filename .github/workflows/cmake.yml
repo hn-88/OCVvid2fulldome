@@ -19,7 +19,7 @@ jobs:
     - name: Install pre-built OpenCV
       # Copy-pasting from travis yml.
       run: |
-        sh opencv430install.sh
+        sh ocv430installforactions.sh
         
     - name: Configure CMake
       # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
