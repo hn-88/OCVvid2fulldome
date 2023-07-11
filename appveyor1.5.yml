@@ -16,7 +16,9 @@ install:
 #- cmd: setx path "%path%;C:\projects\ocvwarp\opencv-3.4.9\build\install\x86\vc14\bin;C:\projects\ocvwarp\opencv-3.4.9\build\install\x86\vc14\lib"
  - refreshenv
  - cd .. 
-  
+
+before_build:
+  - cmd: git checkout v1.50
   
 build:
   project: OCVvid2fulldomeWin32.vcxproj
