@@ -471,6 +471,7 @@ int main(int argc,char *argv[])
 		inputVideo[i] >> src;
 		aspectratio[i] = (float)src.cols / (float)src.rows; // assuming square pixels
 		inputVideo[i].set(cv::CAP_PROP_POS_FRAMES, 0);
+		inputVideo[i].set(cv::CAP_PROP_FPS, outputfps); // try to fix issue#10
 		// reset the video to the first frame.
 				
 		map_x[i] = cv::Mat(Sout, CV_32FC1);
