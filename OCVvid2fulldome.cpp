@@ -484,7 +484,7 @@ int main(int argc,char *argv[])
 	}
 
 	outputVideo.open(NAME, outputVideo.fourcc(outputfourcc[0], outputfourcc[1], outputfourcc[2], outputfourcc[3]), 
-        inputVideo[0].get(CAP_PROP_FPS), Sout, true);
+        inputVideo[0].get(cv::CAP_PROP_FPS), Sout, true);
     if (!outputVideo.isOpened())
     {
         std::cout  << "Could not open the output video for write: " << NAME << std::endl;
