@@ -455,13 +455,7 @@ int main(int argc,char *argv[])
 	} // end if !skipinputs
 	
 	Sout = cv::Size(outputw,outputw);
-	outputVideo.open(NAME, outputVideo.fourcc(outputfourcc[0], outputfourcc[1], outputfourcc[2], outputfourcc[3]), 
-        outputfps, Sout, true);
-    if (!outputVideo.isOpened())
-    {
-        std::cout  << "Could not open the output video for write: " << NAME << std::endl;
-        return -1;
-    }
+	
 	
 	for (int i=0;i<numvids;i++)
 	{
@@ -471,7 +465,7 @@ int main(int argc,char *argv[])
 		inputVideo[i] >> src;
 		aspectratio[i] = (float)src.cols / (float)src.rows; // assuming square pixels
 		inputVideo[i].set(cv::CAP_PROP_POS_FRAMES, 0);
-		inputVideo[i].set(cv::CAP_PROP_FPS, outputfps); // try to fix issue#10
+		
 		// reset the video to the first frame.
 				
 		map_x[i] = cv::Mat(Sout, CV_32FC1);
@@ -488,6 +482,14 @@ int main(int argc,char *argv[])
 		// supposed to make it faster to remap
 		std::cout<<"\r"<<"Process vid"<<i<<" x:"<<vidlongi[i]<<" y:"<<vidlati[i]<<std::flush;;
 	}
+
+	outputVideo.open(NAME, outputVideo.fourcc(outputfourcc[0], outputfourcc[1], outputfourcc[2], outputfourcc[3]), 
+        inputVideo[0].get(CAP_PROP_FPS), Sout, true);
+    if (!outputVideo.isOpened())
+    {
+        std::cout  << "Could not open the output video for write: " << NAME << std::endl;
+        return -1;
+    }
 	
 	t_start = time(NULL);
 	fps = 0;
