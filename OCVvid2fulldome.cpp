@@ -167,6 +167,7 @@ int main(int argc,char *argv[])
 	double outputfps;
 	char outputfourcc[5] = {'X','V','I','D', '\0'};
 	std::string fourccstr;
+	std::string outputfpsstr;
 	int numvids;
 	std::string VidFileName[100];
 	std::string NAME;
@@ -243,7 +244,8 @@ int main(int argc,char *argv[])
 				infile >> tempstring;
 				infile >> outputw;
 				infile >> tempstring;
-				infile >> outputfps;
+				infile >> outputfpsstr;
+				outputfps = strtod(outputfpsstr);
 				infile >> tempstring;
 				infile >> outputfourcc;
 				infile >> tempstring;
@@ -484,7 +486,7 @@ int main(int argc,char *argv[])
 	}
 
 	outputVideo.open(NAME, outputVideo.fourcc(outputfourcc[0], outputfourcc[1], outputfourcc[2], outputfourcc[3]), 
-        inputVideo[0].get(cv::CAP_PROP_FPS), Sout, true);
+        outputfps, Sout, true);
     if (!outputVideo.isOpened())
     {
         std::cout  << "Could not open the output video for write: " << NAME << std::endl;
