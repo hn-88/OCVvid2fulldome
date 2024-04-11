@@ -185,7 +185,7 @@ int main(int argc,char *argv[])
     unsigned long long framenum = 0;
     std::string tempstring, inistr;
     char const * lTmp;
-    char * ptr;
+    char * ptr = NULL;
      
     cv::Mat src, dst, res;
     cv::Mat dstfloat, dstmult, dstres, dstflip;
@@ -245,7 +245,7 @@ int main(int argc,char *argv[])
 				infile >> outputw;
 				infile >> tempstring;
 				infile >> outputfpsstr;
-				outputfps = strtod(outputfpsstr);
+				outputfps = strtod(outputfpsstr, NULL);
 				infile >> tempstring;
 				infile >> outputfourcc;
 				infile >> tempstring;
