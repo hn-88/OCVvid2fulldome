@@ -245,7 +245,7 @@ int main(int argc,char *argv[])
 				infile >> outputw;
 				infile >> tempstring;
 				infile >> outputfpsstr;
-				outputfps = strtod(outputfpsstr, NULL);
+				outputfps = strtod(outputfpsstr.c_str(), NULL);
 				infile >> tempstring;
 				infile >> outputfourcc;
 				infile >> tempstring;
