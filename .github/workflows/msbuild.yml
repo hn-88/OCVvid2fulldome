@@ -59,7 +59,7 @@ jobs:
       uses: actions/upload-artifact@v3.1.2
       with:
         # Artifact name
-        name: OCVvid2fulldomeWin10
+        name: OCVvid2fulldomeWin10.zip
         # optional, default is artifact
         # A file, directory or wildcard pattern that describes what to upload
         path: x64\Release\x64Win10.exe
